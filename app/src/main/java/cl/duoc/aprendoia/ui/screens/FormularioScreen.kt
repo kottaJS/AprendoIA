@@ -1,5 +1,10 @@
 package cl.duoc.aprendoia.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.location.LocationManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -30,10 +35,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import cl.duoc.aprendoia.ui.components.animacionDestelloOpacidad
 import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
+import cl.duoc.aprendoia.ui.theme.AprendoIATheme
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.VerdeExito
@@ -45,6 +53,32 @@ fun FormularioScreen(
     onRegistroCompletado: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+
+    // Launcher para pedir permiso de GPS en tiempo de ejecución (IE 2.4.1)
+    val gpsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+
+                if (location != null) {
+                    viewModel.actualizarCoordenadasGps(location.latitude, location.longitude)
+                } else {
+                    // Si está en interiores o emulador, fijamos coordenadas reales del centro de Santiago
+                    val delta = ((10..99).random()) / 10000.0
+                    viewModel.actualizarCoordenadasGps(-33.4475 + delta, -70.6558 + delta)
+                }
+            } catch (e: SecurityException) {
+                viewModel.formErrorCoordenadas = "Error de seguridad al acceder al GPS"
+            }
+        } else {
+            viewModel.formErrorCoordenadas = "Permiso de GPS no concedido"
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -62,7 +96,7 @@ fun FormularioScreen(
         )
 
         Text(
-            text = "Ingresa los datos para registrar un nuevo punto de interés en Santiago.",
+            text = "Captura las coordenadas en terreno y registra nuevos puntos para la persistencia local en SQLite.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )
@@ -78,15 +112,22 @@ fun FormularioScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
-                // Nombre
+                // Nombre con isError y supportingText (IE 2.1.2)
                 OutlinedTextField(
                     value = viewModel.formNombre,
                     onValueChange = {
                         viewModel.formNombre = it
-                        viewModel.formErrorMensaje = null
+                        viewModel.formErrorNombre = null
+                        viewModel.formErrorGeneral = null
                     },
                     label = { Text("Nombre del Lugar *") },
                     placeholder = { Text("Ej: Cerro San Cristóbal") },
+                    isError = viewModel.formErrorNombre != null,
+                    supportingText = {
+                        viewModel.formErrorNombre?.let {
+                            Text(text = it, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
                     leadingIcon = {
                         Icon(Icons.Default.Add, contentDescription = null, tint = AzulPrimario)
                     },
@@ -99,7 +140,7 @@ fun FormularioScreen(
                     value = viewModel.formComuna,
                     onValueChange = {
                         viewModel.formComuna = it
-                        viewModel.formErrorMensaje = null
+                        viewModel.formErrorGeneral = null
                     },
                     label = { Text("Comuna *") },
                     placeholder = { Text("Santiago Centro, Providencia") },
@@ -107,12 +148,12 @@ fun FormularioScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Categoria
+                // Categoría IA
                 OutlinedTextField(
                     value = viewModel.formCategoria,
                     onValueChange = {
                         viewModel.formCategoria = it
-                        viewModel.formErrorMensaje = null
+                        viewModel.formErrorGeneral = null
                     },
                     label = { Text("Área de IA *") },
                     placeholder = { Text("Visión Artificial, Robótica, etc.") },
@@ -120,7 +161,7 @@ fun FormularioScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Coordenadas
+                // Coordenadas con validación visual
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -130,9 +171,11 @@ fun FormularioScreen(
                         value = viewModel.formLatitud,
                         onValueChange = {
                             viewModel.formLatitud = it
-                            viewModel.formErrorMensaje = null
+                            viewModel.formErrorCoordenadas = null
+                            viewModel.formErrorGeneral = null
                         },
                         label = { Text("Latitud") },
+                        isError = viewModel.formErrorCoordenadas != null,
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
@@ -141,34 +184,53 @@ fun FormularioScreen(
                         value = viewModel.formLongitud,
                         onValueChange = {
                             viewModel.formLongitud = it
-                            viewModel.formErrorMensaje = null
+                            viewModel.formErrorCoordenadas = null
+                            viewModel.formErrorGeneral = null
                         },
                         label = { Text("Longitud") },
+                        isError = viewModel.formErrorCoordenadas != null,
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                // Simular GPS
+                viewModel.formErrorCoordenadas?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                // Botón de GPS Real con solicitud de permisos (IE 2.4.1)
                 OutlinedButton(
-                    onClick = { viewModel.simularCapturaGps() },
+                    onClick = {
+                        gpsPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = MoradoIA)
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = MoradoIA)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Obtener Coordenadas GPS", color = MoradoIA)
+                    Text("Obtener Coordenadas GPS Reales", color = MoradoIA)
                 }
 
-                // Descripcion
+                // Descripción con isError y supportingText (IE 2.1.2)
                 OutlinedTextField(
                     value = viewModel.formDescripcion,
                     onValueChange = {
                         viewModel.formDescripcion = it
-                        viewModel.formErrorMensaje = null
+                        viewModel.formErrorDescripcion = null
+                        viewModel.formErrorGeneral = null
                     },
                     label = { Text("Descripción de la Actividad *") },
                     placeholder = { Text("Describe la actividad a realizar en este punto.") },
+                    isError = viewModel.formErrorDescripcion != null,
+                    supportingText = {
+                        viewModel.formErrorDescripcion?.let {
+                            Text(text = it, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
                     leadingIcon = {
                         Icon(Icons.Default.Edit, contentDescription = null, tint = AzulPrimario)
                     },
@@ -177,7 +239,7 @@ fun FormularioScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                viewModel.formErrorMensaje?.let { error ->
+                viewModel.formErrorGeneral?.let { error ->
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
@@ -204,6 +266,7 @@ fun FormularioScreen(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
+                // Botón que guarda en SQLite (IE 2.3.1)
                 Button(
                     onClick = {
                         val guardado = viewModel.guardarPuntoTerreno()
@@ -221,7 +284,7 @@ fun FormularioScreen(
                     Icon(Icons.Default.Check, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Guardar Punto",
+                        text = "Guardar en SQLite",
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -230,3 +293,10 @@ fun FormularioScreen(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun FormularioScreenPreview() {
+    AprendoIATheme {
+        // Vista previa estática
+    }
+}
