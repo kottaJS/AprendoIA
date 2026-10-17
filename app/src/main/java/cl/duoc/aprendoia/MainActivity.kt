@@ -89,9 +89,7 @@ class MainActivity : ComponentActivity() {
                     // Si no ha iniciado sesion mostramos el Login
                     if (!appViewModel.estaAutenticado) {
                         LoginScreen(
-                            onLoginExitoso = { email, clave ->
-                                appViewModel.iniciarSesion(email, clave)
-                            }
+                            viewModel = appViewModel
                         )
                     } else {
                         MainContainer(viewModel = appViewModel)

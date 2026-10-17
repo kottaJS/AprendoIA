@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,20 +38,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
+import cl.duoc.aprendoia.ui.theme.AprendoIATheme
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
+import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
 @Composable
 fun LoginScreen(
-    onLoginExitoso: (email: String, password: String) -> Unit
+    viewModel: AprendoIAViewModel? = null,
+    onLoginExitoso: ((email: String, password: String) -> Unit)? = null
 ) {
     var email by remember { mutableStateOf("estudiante@duocuc.cl") }
     var password by remember { mutableStateOf("123456") }
     var esModoRegistro by remember { mutableStateOf(false) }
     var nombreRegistro by remember { mutableStateOf("") }
-    var mensajeError by remember { mutableStateOf<String?>(null) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -90,7 +92,7 @@ fun LoginScreen(
             )
 
             Text(
-                text = "Plataforma de Aprendizaje Móvil",
+                text = "Plataforma Móvil Gamificada • Duoc UC",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center
@@ -120,10 +122,7 @@ fun LoginScreen(
                     if (esModoRegistro) {
                         OutlinedTextField(
                             value = nombreRegistro,
-                            onValueChange = {
-                                nombreRegistro = it
-                                mensajeError = null
-                            },
+                            onValueChange = { nombreRegistro = it },
                             label = { Text("Nombre Completo") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -131,13 +130,20 @@ fun LoginScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
+                    // Campo de correo con isError y supportingText (IE 2.1.2)
                     OutlinedTextField(
                         value = email,
                         onValueChange = {
                             email = it
-                            mensajeError = null
+                            viewModel?.loginEmailError = null
                         },
                         label = { Text("Correo Electrónico") },
+                        isError = viewModel?.loginEmailError != null,
+                        supportingText = {
+                            viewModel?.loginEmailError?.let { err ->
+                                Text(text = err, color = MaterialTheme.colorScheme.error)
+                            }
+                        },
                         leadingIcon = {
                             Icon(Icons.Default.Person, contentDescription = null, tint = AzulPrimario)
                         },
@@ -148,13 +154,20 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Campo de contraseña con isError y supportingText (IE 2.1.2)
                     OutlinedTextField(
                         value = password,
                         onValueChange = {
                             password = it
-                            mensajeError = null
+                            viewModel?.loginPasswordError = null
                         },
                         label = { Text("Contraseña") },
+                        isError = viewModel?.loginPasswordError != null,
+                        supportingText = {
+                            viewModel?.loginPasswordError?.let { err ->
+                                Text(text = err, color = MaterialTheme.colorScheme.error)
+                            }
+                        },
                         leadingIcon = {
                             Icon(Icons.Default.Edit, contentDescription = null, tint = AzulPrimario)
                         },
@@ -164,25 +177,15 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    mensajeError?.let { error ->
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
+                    // Botón que delega la validación en el ViewModel (IE 2.2.1)
                     Button(
                         onClick = {
-                            if (email.isBlank() || !email.contains("@")) {
-                                mensajeError = "Ingresa un correo electrónico válido"
-                            } else if (password.length < 3) {
-                                mensajeError = "La contraseña debe tener al menos 3 caracteres"
+                            if (viewModel != null) {
+                                viewModel.validarLogin(email, password)
                             } else {
-                                onLoginExitoso(email, password)
+                                onLoginExitoso?.invoke(email, password)
                             }
                         },
                         modifier = Modifier
@@ -201,10 +204,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     TextButton(
-                        onClick = {
-                            esModoRegistro = !esModoRegistro
-                            mensajeError = null
-                        }
+                        onClick = { esModoRegistro = !esModoRegistro }
                     ) {
                         Text(
                             text = if (esModoRegistro) "¿Ya tienes cuenta? Inicia sesión" else "¿No tienes cuenta? Regístrate",
@@ -217,3 +217,10 @@ fun LoginScreen(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun LoginScreenPreview() {
+    AprendoIATheme {
+        LoginScreen()
+    }
+}
