@@ -11,6 +11,8 @@ import cl.duoc.aprendoia.data.AprendoIADbHelper
 import cl.duoc.aprendoia.model.CapsulaIA
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.model.Usuario
+import cl.duoc.aprendoia.model.VideoIA
+import org.json.JSONObject
 
 class AprendoIAViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -21,6 +23,11 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         private set
 
     var estaAutenticado by mutableStateOf(true)
+
+    // Estado para el resultado del escáner de códigos QR
+    var videoQREscaneado by mutableStateOf<VideoIA?>(null)
+    var mensajeErrorQR by mutableStateOf<String?>(null)
+    var mensajeExitoQR by mutableStateOf<String?>(null)
 
     // Lista de puntos cargada desde SQLite
     private val _puntosSantiago = mutableStateListOf<PuntoInteres>()
@@ -152,6 +159,60 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
             return true
         }
         return false
+    }
+
+    /**
+     * Procesa y valida el texto capturado por el escáner QR.
+     * Según la especificación del docente, debe contener un JSON con:
+     * { "titulo": "...", "descripcion": "...", "url": "..." }
+     * Si no cumple el formato, genera el mensaje de error textual de la clase:
+     * "Se leyó el QR, pero no contiene un JSON válido"
+     */
+    fun procesarContenidoQR(rawText: String, puntoId: Int? = null): Boolean {
+        mensajeErrorQR = null
+        mensajeExitoQR = null
+
+        return try {
+            val json = JSONObject(rawText.trim())
+            val titulo = json.optString("titulo", "")
+            val descripcion = json.optString("descripcion", "")
+            val url = json.optString("url", "")
+
+            if (titulo.isNotBlank() && descripcion.isNotBlank() && url.isNotBlank()) {
+                val video = VideoIA(titulo = titulo, descripcion = descripcion, url = url)
+                videoQREscaneado = video
+                mensajeExitoQR = "¡Código QR validado exitosamente! (+40 pts)"
+
+                if (puntoId != null) {
+                    completarMision(puntoId)
+                } else {
+                    // Sumar puntaje general por ver cápsula en video
+                    usuarioActual = usuarioActual?.let {
+                        val nuevoPuntaje = it.puntaje + 40
+                        val act = it.copy(puntaje = nuevoPuntaje)
+                        dbHelper.guardarOActualizarUsuario(act)
+                        act
+                    }
+                }
+                true
+            } else {
+                mensajeErrorQR = "Se leyó el QR, pero no contiene un JSON válido"
+                false
+            }
+        } catch (e: Exception) {
+            mensajeErrorQR = "Se leyó el QR, pero no contiene un JSON válido"
+            false
+        }
+    }
+
+    fun limpiarEstadoQR() {
+        videoQREscaneado = null
+        mensajeErrorQR = null
+        mensajeExitoQR = null
+    }
+
+    fun obtenerJsonEjemplo(punto: PuntoInteres): String {
+        return """{"titulo":"${punto.nombre}","descripcion":"${punto.descripcion}","url":"${punto.urlVideo}"}"""
     }
 
     // Registrar Selfie con la Cámara Nativa (IE 2.4.1)

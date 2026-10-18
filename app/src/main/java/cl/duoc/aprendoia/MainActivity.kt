@@ -19,8 +19,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -55,7 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.ui.components.animacionRotacionInfinita
+import cl.duoc.aprendoia.ui.screens.EscaneoQRScreen
 import cl.duoc.aprendoia.ui.screens.FormularioScreen
+import cl.duoc.aprendoia.ui.screens.HistorialScreen
 import cl.duoc.aprendoia.ui.screens.HomeScreen
 import cl.duoc.aprendoia.ui.screens.LoginScreen
 import cl.duoc.aprendoia.ui.screens.MisionesScreen
@@ -69,6 +74,8 @@ import kotlinx.coroutines.launch
 enum class PantallaApp {
     INICIO,
     MISIONES,
+    ESCANEADOR_QR,
+    HISTORIAL,
     FORMULARIO
 }
 
@@ -86,7 +93,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val appViewModel: AprendoIAViewModel = viewModel()
 
-                    // Si no ha iniciado sesion mostramos el Login
+                    // Si no ha iniciado sesión mostramos el Login con validación
                     if (!appViewModel.estaAutenticado) {
                         LoginScreen(
                             viewModel = appViewModel
@@ -141,7 +148,7 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Opciones del menu
+                // Opciones del menú drawer
                 NavigationDrawerItem(
                     label = { Text("Inicio") },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
@@ -155,10 +162,32 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
 
                 NavigationDrawerItem(
                     label = { Text("Misiones en Santiago") },
-                    icon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Place, contentDescription = null) },
                     selected = pantallaActual == PantallaApp.MISIONES,
                     onClick = {
                         pantallaActual = PantallaApp.MISIONES
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Escanear Código QR") },
+                    icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
+                    selected = pantallaActual == PantallaApp.ESCANEADOR_QR,
+                    onClick = {
+                        pantallaActual = PantallaApp.ESCANEADOR_QR
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Colección de Descubrimientos") },
+                    icon = { Icon(Icons.Default.Collections, contentDescription = null) },
+                    selected = pantallaActual == PantallaApp.HISTORIAL,
+                    onClick = {
+                        pantallaActual = PantallaApp.HISTORIAL
                         coroutineScope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -201,6 +230,8 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                                 text = when (pantallaActual) {
                                     PantallaApp.INICIO -> "Aprendo IA"
                                     PantallaApp.MISIONES -> "Misiones en Santiago"
+                                    PantallaApp.ESCANEADOR_QR -> "Escanear QR"
+                                    PantallaApp.HISTORIAL -> "Descubrimientos"
                                     PantallaApp.FORMULARIO -> "Nuevo Punto"
                                 },
                                 style = MaterialTheme.typography.titleMedium,
@@ -269,8 +300,20 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                     NavigationBarItem(
                         selected = pantallaActual == PantallaApp.MISIONES,
                         onClick = { pantallaActual = PantallaApp.MISIONES },
-                        icon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        icon = { Icon(Icons.Default.Place, contentDescription = null) },
                         label = { Text("Misiones") }
+                    )
+                    NavigationBarItem(
+                        selected = pantallaActual == PantallaApp.ESCANEADOR_QR,
+                        onClick = { pantallaActual = PantallaApp.ESCANEADOR_QR },
+                        icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
+                        label = { Text("QR") }
+                    )
+                    NavigationBarItem(
+                        selected = pantallaActual == PantallaApp.HISTORIAL,
+                        onClick = { pantallaActual = PantallaApp.HISTORIAL },
+                        icon = { Icon(Icons.Default.Collections, contentDescription = null) },
+                        label = { Text("Descubrimientos") }
                     )
                     NavigationBarItem(
                         selected = pantallaActual == PantallaApp.FORMULARIO,
@@ -293,6 +336,12 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                         onIrAFormulario = { pantallaActual = PantallaApp.FORMULARIO }
                     )
                     PantallaApp.MISIONES -> MisionesScreen(
+                        viewModel = viewModel
+                    )
+                    PantallaApp.ESCANEADOR_QR -> EscaneoQRScreen(
+                        viewModel = viewModel
+                    )
+                    PantallaApp.HISTORIAL -> HistorialScreen(
                         viewModel = viewModel
                     )
                     PantallaApp.FORMULARIO -> FormularioScreen(

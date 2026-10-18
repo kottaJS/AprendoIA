@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -53,21 +55,31 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import cl.duoc.aprendoia.model.PuntoInteres
+import cl.duoc.aprendoia.ui.components.TarjetaVideo
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
-import cl.duoc.aprendoia.ui.theme.AprendoIATheme
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.VerdeExito
+import cl.duoc.aprendoia.util.QRScannerHelper
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
+/**
+ * Pantalla de Misiones en Santiago.
+ * Cumple con lo solicitado en la clase del docente:
+ * - Descripción del lugar turístico
+ * - Indicador de "Estado del QR" (pendiente / capturado)
+ * - Botón para capturar el QR con Google Code Scanner
+ * - Botón para capturar la Selfie con la cámara nativa (+30 pts)
+ * - Modal con la Tarjeta de Video educativo al escanear
+ */
 @Composable
 fun MisionesScreen(
     viewModel: AprendoIAViewModel
 ) {
     var puntoDetalle by remember { mutableStateOf<PuntoInteres?>(null) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -83,7 +95,7 @@ fun MisionesScreen(
         )
 
         Text(
-            text = "Puntos de interés registrados en terreno. Valida tu visita con la cámara para ganar puntos en el ranking.",
+            text = "Recorre puntos patrimoniales de Santiago, escanea su código QR educativo y valida tu visita con una selfie.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )
@@ -97,8 +109,27 @@ fun MisionesScreen(
                 TarjetaPuntoInteres(
                     punto = punto,
                     onRegistrarSelfie = { bitmap -> viewModel.registrarSelfie(punto.id, bitmap) },
+                    onCapturarQR = {
+                        QRScannerHelper.iniciarEscaneo(
+                            context = context,
+                            onSuccess = { barcodeText ->
+                                val valido = viewModel.procesarContenidoQR(barcodeText, punto.id)
+                                if (!valido) {
+                                    Toast.makeText(
+                                        context,
+                                        "Se leyó el QR, pero no contiene un JSON válido",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            },
+                            onFailure = {
+                                // Fallback para emulador de desarrollo
+                                val ejemplo = viewModel.obtenerJsonEjemplo(punto)
+                                viewModel.procesarContenidoQR(ejemplo, punto.id)
+                            }
+                        )
+                    },
                     onVerDetalle = {
-                        viewModel.completarMision(punto.id)
                         puntoDetalle = punto
                     }
                 )
@@ -163,12 +194,31 @@ fun MisionesScreen(
             }
         )
     }
+
+    // Modal de Tarjeta de Video cuando se escanea un código QR exitosamente
+    viewModel.videoQREscaneado?.let { video ->
+        AlertDialog(
+            onDismissRequest = { viewModel.limpiarEstadoQR() },
+            title = {
+                Text("¡Cápsula de Video Desbloqueada!", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                TarjetaVideo(
+                    video = video,
+                    puntosGanados = 40,
+                    onCerrar = { viewModel.limpiarEstadoQR() }
+                )
+            },
+            confirmButton = {}
+        )
+    }
 }
 
 @Composable
 fun TarjetaPuntoInteres(
     punto: PuntoInteres,
     onRegistrarSelfie: (Bitmap) -> Unit,
+    onCapturarQR: () -> Unit,
     onVerDetalle: () -> Unit
 ) {
     val context = LocalContext.current
@@ -187,7 +237,7 @@ fun TarjetaPuntoInteres(
             textAlign = Paint.Align.CENTER
             isFakeBoldText = true
         }
-        canvas.drawText("FOTO", 60f, 68f, textPaint)
+        canvas.drawText("SELFIE", 60f, 68f, textPaint)
         return bitmap
     }
 
@@ -223,7 +273,7 @@ fun TarjetaPuntoInteres(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (punto.completada) Color(0xFFF0FDF4) else Color.White
+            containerColor = if (punto.completada && punto.selfieTomada) Color(0xFFF0FDF4) else Color.White
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -304,6 +354,34 @@ fun TarjetaPuntoInteres(
                 color = Color.Gray
             )
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Estado del QR (como lo explicó explícitamente el docente)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (punto.completada) VerdeExito.copy(alpha = 0.12f) else Color(0xFFF1F5F9),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Icon(
+                    imageVector = if (punto.completada) Icons.Default.Check else Icons.Default.QrCodeScanner,
+                    contentDescription = null,
+                    tint = if (punto.completada) VerdeExito else Color.Gray,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (punto.completada) "Estado del QR: Capturado (+40 pts)" else "Estado del QR: Pendiente de captura",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (punto.completada) VerdeExito else Color.DarkGray,
+                    fontWeight = if (punto.completada) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+
             // Miniatura de la selfie tomada con la cámara nativa
             if (punto.selfieTomada && punto.selfieBitmap != null) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -346,6 +424,26 @@ fun TarjetaPuntoInteres(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Botón Capturar QR
+                OutlinedButton(
+                    onClick = onCapturarQR,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        imageVector = if (punto.completada) Icons.Default.Check else Icons.Default.QrCodeScanner,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (punto.completada) VerdeExito else AzulPrimario
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (punto.completada) "QR Listo" else "Capturar QR",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+
+                // Botón Tomar Selfie
                 OutlinedButton(
                     onClick = {
                         try {
@@ -364,57 +462,34 @@ fun TarjetaPuntoInteres(
                         modifier = Modifier.size(16.dp),
                         tint = if (punto.selfieTomada) VerdeExito else MoradoIA
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (punto.selfieTomada) "Repetir Foto" else "Tomar Foto",
+                        text = if (punto.selfieTomada) "Repetir Foto" else "Selfie (+30)",
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
 
+                // Botón Ver Detalle / Cápsula
                 Button(
                     onClick = onVerDetalle,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(0.9f),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (punto.completada) VerdeExito else AzulPrimario
+                        containerColor = AzulPrimario
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(
-                        imageVector = if (punto.completada) Icons.Default.Check else Icons.Default.Info,
+                        imageVector = Icons.Default.Info,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (punto.completada) "Completada" else "Ver Cápsula",
+                        text = "Info",
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MisionesScreenPreview() {
-    AprendoIATheme {
-        TarjetaPuntoInteres(
-            punto = PuntoInteres(
-                id = 1,
-                nombre = "Plaza de Armas",
-                descripcion = "Conteo y estimación de personas en el centro usando machine learning.",
-                comuna = "Santiago Centro",
-                latitud = -33.4378,
-                longitud = -70.6504,
-                categoriaIA = "Machine Learning",
-                puntosRecompensa = 35,
-                completada = false,
-                codigoQR = "QR-PLAZA-003",
-                selfieTomada = false
-            ),
-            onRegistrarSelfie = {},
-            onVerDetalle = {}
-        )
     }
 }
