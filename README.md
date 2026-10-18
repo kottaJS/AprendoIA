@@ -21,10 +21,11 @@ Aplicacion movil nativa desarrollada en Android con Jetpack Compose para gamific
 - Recursos nativos:
   - Camara para capturar fotos de validacion en cada mision.
   - GPS / Ubicacion para capturar latitud y longitud actuales en el formulario.
+  - Lector de codigos QR con Google Play Services Code Scanner para validar JSON educativos y reproducir videos.
 - Animaciones para transiciones y botones interactivos.
 
 ## Estructura del Proyecto
-- `ui/screens`: Pantallas principales (Home, Login, Misiones, Formulario).
+- `ui/screens`: Pantallas principales (Home, Login, Misiones, Escaneo QR, Descubrimientos, Formulario).
 - `ui/components`: Componentes reutilizables y animaciones.
 - `ui/theme`: Configuracion de colores, tipografia y tema Material 3.
 - `viewmodel`: Estado y logica desacoplada de la interfaz.
