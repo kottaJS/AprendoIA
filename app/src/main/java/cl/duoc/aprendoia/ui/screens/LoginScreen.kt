@@ -51,7 +51,7 @@ fun LoginScreen(
     viewModel: AprendoIAViewModel? = null,
     onLoginExitoso: ((email: String, password: String) -> Unit)? = null
 ) {
-    var email by remember { mutableStateOf("estudiante@duocuc.cl") }
+    var email by remember { mutableStateOf("test@duocuc.cl") }
     var password by remember { mutableStateOf("123456") }
     var esModoRegistro by remember { mutableStateOf(false) }
     var nombreRegistro by remember { mutableStateOf("") }
@@ -130,7 +130,6 @@ fun LoginScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    // Campo de correo con isError y supportingText (IE 2.1.2)
                     OutlinedTextField(
                         value = email,
                         onValueChange = {
@@ -154,7 +153,6 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Campo de contraseña con isError y supportingText (IE 2.1.2)
                     OutlinedTextField(
                         value = password,
                         onValueChange = {
@@ -179,7 +177,6 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Botón que delega la validación en el ViewModel (IE 2.2.1)
                     Button(
                         onClick = {
                             if (viewModel != null) {

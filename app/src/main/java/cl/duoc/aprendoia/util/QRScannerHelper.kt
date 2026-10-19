@@ -5,10 +5,6 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
-/**
- * Helper para invocar Google Play Services Code Scanner (GmsBarcodeScanning),
- * exactamente como fue explicado por el docente en la clase.
- */
 object QRScannerHelper {
 
     fun iniciarEscaneo(

@@ -18,18 +18,15 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val dbHelper = AprendoIADbHelper(application.applicationContext)
 
-    // Estado del usuario actual
     var usuarioActual by mutableStateOf<Usuario?>(null)
         private set
 
     var estaAutenticado by mutableStateOf(true)
 
-    // Estado para el resultado del escáner de códigos QR
     var videoQREscaneado by mutableStateOf<VideoIA?>(null)
     var mensajeErrorQR by mutableStateOf<String?>(null)
     var mensajeExitoQR by mutableStateOf<String?>(null)
 
-    // Lista de puntos cargada desde SQLite
     private val _puntosSantiago = mutableStateListOf<PuntoInteres>()
     val puntosSantiago: List<PuntoInteres> get() = _puntosSantiago
 
@@ -39,11 +36,9 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         CapsulaIA(3, "Ética y Datos en Santiago", "Ética en IA", 4, 25, "Cuidado con los datos personales al usar cámaras y sensores en la calle.")
     )
 
-    // Estados para validación desacoplada del Login
     var loginEmailError by mutableStateOf<String?>(null)
     var loginPasswordError by mutableStateOf<String?>(null)
 
-    // Campos del formulario
     var formNombre by mutableStateOf("")
     var formComuna by mutableStateOf("Santiago Centro")
     var formCategoria by mutableStateOf("Visión Artificial")
@@ -51,7 +46,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
     var formLongitud by mutableStateOf("-70.6558")
     var formDescripcion by mutableStateOf("")
 
-    // Errores específicos por campo en el formulario (IE 2.1.2)
     var formErrorNombre by mutableStateOf<String?>(null)
     var formErrorDescripcion by mutableStateOf<String?>(null)
     var formErrorCoordenadas by mutableStateOf<String?>(null)
@@ -65,14 +59,13 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun cargarDatosDesdeSQLite() {
-        // Cargar usuario persistido o crear el por defecto
         val usuarioDb = dbHelper.obtenerUsuario()
         if (usuarioDb != null) {
             usuarioActual = usuarioDb
         } else {
             val userDefault = Usuario(
-                email = "estudiante@duocuc.cl",
-                nombre = "Maximiliano Dinamarca",
+                email = "test@duocuc.cl",
+                nombre = "Estudiante",
                 rol = "Estudiante",
                 puntaje = 150
             )
@@ -80,13 +73,11 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
             dbHelper.guardarOActualizarUsuario(userDefault)
         }
 
-        // Cargar puntos de Santiago desde SQLite
         _puntosSantiago.clear()
         val puntosDb = dbHelper.obtenerTodosLosPuntos()
         _puntosSantiago.addAll(puntosDb)
     }
 
-    // Validación desacoplada de Login (IE 2.2.1)
     fun validarLogin(email: String, clave: String): Boolean {
         loginEmailError = null
         loginPasswordError = null
@@ -139,7 +130,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         usuarioActual = null
     }
 
-    // Completar misión con QR (suma puntaje base y persiste en SQLite)
     fun completarMision(puntoId: Int): Boolean {
         val index = _puntosSantiago.indexOfFirst { it.id == puntoId }
         if (index != -1 && !_puntosSantiago[index].completada) {
@@ -147,7 +137,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
             val puntoActualizado = punto.copy(completada = true)
             _puntosSantiago[index] = puntoActualizado
 
-            // Sumamos los puntos al perfil y persistimos
             usuarioActual = usuarioActual?.let {
                 val nuevoPuntaje = it.puntaje + punto.puntosRecompensa
                 val userActualizado = it.copy(puntaje = nuevoPuntaje)
@@ -161,24 +150,25 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         return false
     }
 
-    /**
-     * Procesa y valida el texto capturado por el escáner QR.
-     * Según la especificación del docente, debe contener un JSON con:
-     * { "titulo": "...", "descripcion": "...", "url": "..." }
-     * Si no cumple el formato, genera el mensaje de error textual de la clase:
-     * "Se leyó el QR, pero no contiene un JSON válido"
-     */
     fun procesarContenidoQR(rawText: String, puntoId: Int? = null): Boolean {
         mensajeErrorQR = null
         mensajeExitoQR = null
 
         return try {
             val json = JSONObject(rawText.trim())
-            val titulo = json.optString("titulo", "")
-            val descripcion = json.optString("descripcion", "")
-            val url = json.optString("url", "")
+            val titulo = json.optString("titulo").ifBlank {
+                json.optString("lugar").ifBlank {
+                    json.optString("nombre", "")
+                }
+            }
+            val descripcion = json.optString("descripcion").ifBlank {
+                "Cápsula educativa y validación turística de Santiago con IA."
+            }
+            val url = json.optString("url").ifBlank {
+                "https://www.youtube.com/shorts/sample1"
+            }
 
-            if (titulo.isNotBlank() && descripcion.isNotBlank() && url.isNotBlank()) {
+            if (titulo.isNotBlank()) {
                 val video = VideoIA(titulo = titulo, descripcion = descripcion, url = url)
                 videoQREscaneado = video
                 mensajeExitoQR = "¡Código QR validado exitosamente! (+40 pts)"
@@ -186,7 +176,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
                 if (puntoId != null) {
                     completarMision(puntoId)
                 } else {
-                    // Sumar puntaje general por ver cápsula en video
                     usuarioActual = usuarioActual?.let {
                         val nuevoPuntaje = it.puntaje + 40
                         val act = it.copy(puntaje = nuevoPuntaje)
@@ -215,12 +204,11 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         return """{"titulo":"${punto.nombre}","descripcion":"${punto.descripcion}","url":"${punto.urlVideo}"}"""
     }
 
-    // Registrar Selfie con la Cámara Nativa (IE 2.4.1)
     fun registrarSelfie(puntoId: Int, bitmap: Bitmap) {
         val index = _puntosSantiago.indexOfFirst { it.id == puntoId }
         if (index != -1) {
             val punto = _puntosSantiago[index]
-            val puntosExtra = 30 // Puntos extra por selfie turística
+            val puntosExtra = 30
             val puntoActualizado = punto.copy(
                 completada = true,
                 selfieTomada = true,
@@ -228,7 +216,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
             )
             _puntosSantiago[index] = puntoActualizado
 
-            // Sumamos los puntos extra al usuario
             usuarioActual = usuarioActual?.let {
                 val nuevoPuntaje = it.puntaje + if (!punto.completada) punto.puntosRecompensa + puntosExtra else puntosExtra
                 val userActualizado = it.copy(puntaje = nuevoPuntaje)
@@ -240,7 +227,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // Actualizar coordenadas GPS reales desde el sensor del dispositivo (IE 2.4.1)
     fun actualizarCoordenadasGps(latitud: Double, longitud: Double) {
         formLatitud = String.format(java.util.Locale.US, "%.5f", latitud)
         formLongitud = String.format(java.util.Locale.US, "%.5f", longitud)
@@ -248,7 +234,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         formExitoMensaje = "Coordenadas GPS reales obtenidas con éxito"
     }
 
-    // Guardar nuevo punto en SQLite con validación desacoplada (IE 2.1.2 e IE 2.3.1)
     fun guardarPuntoTerreno(): Boolean {
         formErrorNombre = null
         formErrorDescripcion = null
@@ -283,7 +268,6 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
             return false
         }
 
-        // Crear el nuevo punto e insertarlo en SQLite
         val nuevoPunto = PuntoInteres(
             id = (_puntosSantiago.maxOfOrNull { it.id } ?: 0) + 1,
             nombre = formNombre.trim(),

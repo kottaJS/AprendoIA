@@ -2,7 +2,6 @@ package cl.duoc.aprendoia.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,19 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cl.duoc.aprendoia.ui.components.TarjetaVideo
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
-import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.ErrorRojo
+import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.util.QRScannerHelper
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
-/**
- * Pantalla de Escaneo de Códigos QR.
- * Diseñada de acuerdo al modelo explicado por el docente:
- * - Utiliza GmsBarcodeScanning (Google Code Scanner)
- * - Valida la estructura JSON del video { titulo, descripcion, url }
- * - Muestra la Tarjeta de Video al ser válido
- * - Despliega mensaje de rechazo si el QR no contiene un JSON válido
- */
 @Composable
 fun EscaneoQRScreen(
     viewModel: AprendoIAViewModel
@@ -78,7 +69,6 @@ fun EscaneoQRScreen(
     ) {
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Encabezado
         Box(
             modifier = Modifier
                 .size(72.dp)
@@ -113,7 +103,6 @@ fun EscaneoQRScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Botón principal de escaneo con Google Code Scanner
         Button(
             onClick = {
                 QRScannerHelper.iniciarEscaneo(
@@ -132,7 +121,6 @@ fun EscaneoQRScreen(
                         Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
                     },
                     onFailure = {
-                        // Fallback seguro si el dispositivo no tiene Google Play Services instalado
                         mostrarDialogoManual = true
                     }
                 )
@@ -154,7 +142,6 @@ fun EscaneoQRScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Botón de prueba rápida para emuladores
         OutlinedButton(
             onClick = {
                 val jsonEjemplo = """{"titulo":"Automatiza Excel con IA","descripcion":"Aprende a integrar modelos de lenguaje para clasificar datos y optimizar tareas.","url":"https://www.youtube.com/shorts/sample1"}"""
@@ -172,7 +159,6 @@ fun EscaneoQRScreen(
 
         OutlinedButton(
             onClick = {
-                // Simular un QR no válido para demostrar la validación requerida
                 val qrInvalido = "https://www.duoc.cl"
                 val resultado = viewModel.procesarContenidoQR(qrInvalido)
                 if (!resultado) {
@@ -193,7 +179,6 @@ fun EscaneoQRScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Si se leyó un QR exitoso: mostrar la Tarjeta de Video
         viewModel.videoQREscaneado?.let { video ->
             Text(
                 text = "Resultado del Escaneo:",
@@ -212,7 +197,6 @@ fun EscaneoQRScreen(
             )
         }
 
-        // Si falló la validación del QR
         viewModel.mensajeErrorQR?.let { errorMsg ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -241,7 +225,6 @@ fun EscaneoQRScreen(
         }
     }
 
-    // Diálogo manual para emuladores sin cámara física
     if (mostrarDialogoManual) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoManual = false },

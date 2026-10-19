@@ -17,10 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Star
@@ -47,12 +45,6 @@ import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.VerdeExito
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
-/**
- * Pantalla de Colección de Descubrimientos e Historial.
- * Corresponde a la pantalla descrita por el docente en el minuto 22:27:
- * "cuáles son los QRs que yo capturé y en qué lugar los capturé...
- * fotito chiquitita del lugar o video short... y de qué se trata el video".
- */
 @Composable
 fun HistorialScreen(
     viewModel: AprendoIAViewModel
@@ -73,14 +65,13 @@ fun HistorialScreen(
         )
 
         Text(
-            text = "Registro histórico de códigos QR y selfies turísticas validadas en terreno.",
+            text = "Registro de códigos QR y selfies turísticas validadas en terreno.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Tarjeta resumen de hitos del concurso
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
@@ -150,7 +141,6 @@ fun HistorialScreen(
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(punto.urlVideo))
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                // Navegador no disponible
                             }
                         }
                     )
@@ -177,7 +167,6 @@ fun TarjetaDescubrimiento(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Fotito chiquitita del lugar o selfie (Minuto 22:44)
             if (punto.selfieTomada && punto.selfieBitmap != null) {
                 Image(
                     bitmap = punto.selfieBitmap.asImageBitmap(),

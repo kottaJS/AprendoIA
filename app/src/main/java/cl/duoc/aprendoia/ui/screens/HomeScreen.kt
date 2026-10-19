@@ -122,7 +122,6 @@ fun HomeScreen(
             }
         }
 
-        // Hitos y Progreso en Santiago (solicitado en el caso de estudio)
         item {
             val selfiesTomadas = viewModel.puntosSantiago.count { it.selfieTomada }
 
@@ -138,7 +137,6 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Misiones
                 Card(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -163,7 +161,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Selfies
                 Card(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -188,7 +185,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Puntos
                 Card(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),

@@ -73,8 +73,8 @@ class AprendoIADbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_N
 
         // Usuario inicial
         val valuesUser = ContentValues().apply {
-            put(COL_USER_EMAIL, "estudiante@duocuc.cl")
-            put(COL_USER_NOMBRE, "Maximiliano Dinamarca")
+            put(COL_USER_EMAIL, "test@duocuc.cl")
+            put(COL_USER_NOMBRE, "Estudiante")
             put(COL_USER_ROL, "Estudiante")
             put(COL_USER_PUNTAJE, 150)
         }

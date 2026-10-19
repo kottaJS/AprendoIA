@@ -38,10 +38,6 @@ import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.VerdeExito
 
-/**
- * Componente Tarjeta de Video Educativo, renderizado al validar un código QR
- * según el diseño y código presentado en la clase.
- */
 @Composable
 fun TarjetaVideo(
     video: VideoIA,

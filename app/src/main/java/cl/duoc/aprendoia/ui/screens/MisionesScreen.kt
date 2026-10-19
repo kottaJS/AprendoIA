@@ -28,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -41,7 +40,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,15 +63,6 @@ import cl.duoc.aprendoia.ui.theme.VerdeExito
 import cl.duoc.aprendoia.util.QRScannerHelper
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
-/**
- * Pantalla de Misiones en Santiago.
- * Cumple con lo solicitado en la clase del docente:
- * - Descripción del lugar turístico
- * - Indicador de "Estado del QR" (pendiente / capturado)
- * - Botón para capturar el QR con Google Code Scanner
- * - Botón para capturar la Selfie con la cámara nativa (+30 pts)
- * - Modal con la Tarjeta de Video educativo al escanear
- */
 @Composable
 fun MisionesScreen(
     viewModel: AprendoIAViewModel
@@ -123,7 +112,6 @@ fun MisionesScreen(
                                 }
                             },
                             onFailure = {
-                                // Fallback para emulador de desarrollo
                                 val ejemplo = viewModel.obtenerJsonEjemplo(punto)
                                 viewModel.procesarContenidoQR(ejemplo, punto.id)
                             }
@@ -137,7 +125,6 @@ fun MisionesScreen(
         }
     }
 
-    // Modal con el contenido de la cápsula educativa
     puntoDetalle?.let { punto ->
         AlertDialog(
             onDismissRequest = { puntoDetalle = null },
@@ -195,7 +182,6 @@ fun MisionesScreen(
         )
     }
 
-    // Modal de Tarjeta de Video cuando se escanea un código QR exitosamente
     viewModel.videoQREscaneado?.let { video ->
         AlertDialog(
             onDismissRequest = { viewModel.limpiarEstadoQR() },
@@ -356,7 +342,6 @@ fun TarjetaPuntoInteres(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Estado del QR (como lo explicó explícitamente el docente)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -382,7 +367,6 @@ fun TarjetaPuntoInteres(
                 )
             }
 
-            // Miniatura de la selfie tomada con la cámara nativa
             if (punto.selfieTomada && punto.selfieBitmap != null) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
@@ -419,12 +403,10 @@ fun TarjetaPuntoInteres(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botones de acción limpios
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Botón Capturar QR
                 OutlinedButton(
                     onClick = onCapturarQR,
                     modifier = Modifier.weight(1f),
@@ -443,7 +425,6 @@ fun TarjetaPuntoInteres(
                     )
                 }
 
-                // Botón Tomar Selfie
                 OutlinedButton(
                     onClick = {
                         try {
@@ -469,7 +450,6 @@ fun TarjetaPuntoInteres(
                     )
                 }
 
-                // Botón Ver Detalle / Cápsula
                 Button(
                     onClick = onVerDetalle,
                     modifier = Modifier.weight(0.9f),

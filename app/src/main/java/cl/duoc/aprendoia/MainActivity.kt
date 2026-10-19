@@ -93,7 +93,6 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val appViewModel: AprendoIAViewModel = viewModel()
 
-                    // Si no ha iniciado sesión mostramos el Login con validación
                     if (!appViewModel.estaAutenticado) {
                         LoginScreen(
                             viewModel = appViewModel
@@ -148,7 +147,6 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Opciones del menú drawer
                 NavigationDrawerItem(
                     label = { Text("Inicio") },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },

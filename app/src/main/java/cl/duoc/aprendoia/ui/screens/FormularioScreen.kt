@@ -37,11 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import cl.duoc.aprendoia.ui.components.animacionDestelloOpacidad
 import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
-import cl.duoc.aprendoia.ui.theme.AprendoIATheme
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.VerdeExito
@@ -55,7 +53,6 @@ fun FormularioScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
-    // Launcher para pedir permiso de GPS en tiempo de ejecución (IE 2.4.1)
     val gpsPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -68,7 +65,6 @@ fun FormularioScreen(
                 if (location != null) {
                     viewModel.actualizarCoordenadasGps(location.latitude, location.longitude)
                 } else {
-                    // Si está en interiores o emulador, fijamos coordenadas reales del centro de Santiago
                     val delta = ((10..99).random()) / 10000.0
                     viewModel.actualizarCoordenadasGps(-33.4475 + delta, -70.6558 + delta)
                 }
@@ -112,7 +108,6 @@ fun FormularioScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
-                // Nombre con isError y supportingText (IE 2.1.2)
                 OutlinedTextField(
                     value = viewModel.formNombre,
                     onValueChange = {
@@ -135,7 +130,6 @@ fun FormularioScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Comuna
                 OutlinedTextField(
                     value = viewModel.formComuna,
                     onValueChange = {
@@ -148,7 +142,6 @@ fun FormularioScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Categoría IA
                 OutlinedTextField(
                     value = viewModel.formCategoria,
                     onValueChange = {
@@ -161,7 +154,6 @@ fun FormularioScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Coordenadas con validación visual
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -202,7 +194,6 @@ fun FormularioScreen(
                     )
                 }
 
-                // Botón de GPS Real con solicitud de permisos (IE 2.4.1)
                 OutlinedButton(
                     onClick = {
                         gpsPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -215,7 +206,6 @@ fun FormularioScreen(
                     Text("Obtener Coordenadas GPS Reales", color = MoradoIA)
                 }
 
-                // Descripción con isError y supportingText (IE 2.1.2)
                 OutlinedTextField(
                     value = viewModel.formDescripcion,
                     onValueChange = {
@@ -266,7 +256,6 @@ fun FormularioScreen(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Botón que guarda en SQLite (IE 2.3.1)
                 Button(
                     onClick = {
                         val guardado = viewModel.guardarPuntoTerreno()
@@ -290,13 +279,5 @@ fun FormularioScreen(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FormularioScreenPreview() {
-    AprendoIATheme {
-        // Vista previa estática
     }
 }
