@@ -10,10 +10,16 @@ data class PuntoInteres(
     val latitud: Double,
     val longitud: Double,
     val categoriaIA: String,
-    val puntosRecompensa: Int,
+    val puntosRecompensa: Int = 10,
     val completada: Boolean = false,
     val codigoQR: String,
     val selfieTomada: Boolean = false,
     val selfieBitmap: Bitmap? = null,
-    val urlVideo: String = "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+    val selfieUri: String? = null,
+    val urlVideo: String = "https://www.youtube.com/shorts/dQw4w9WgXcQ",
+    val videoTitulo: String = "",
+    val videoTema: String = "",
+    val distanciaAprox: String = "250 m",
+    val esHitoTuristico: Boolean = true,
+    val videoVisto: Boolean = false
 )

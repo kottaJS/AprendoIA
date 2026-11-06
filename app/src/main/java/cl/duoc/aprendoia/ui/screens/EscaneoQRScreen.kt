@@ -2,6 +2,8 @@ package cl.duoc.aprendoia.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,266 +15,199 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import cl.duoc.aprendoia.ui.components.TarjetaVideo
+import androidx.compose.ui.unit.sp
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
-import cl.duoc.aprendoia.ui.theme.ErrorRojo
-import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.util.QRScannerHelper
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EscaneoQRScreen(
-    viewModel: AprendoIAViewModel
+    viewModel: AprendoIAViewModel,
+    onEscaneoExitoso: () -> Unit,
+    onVolver: () -> Unit
 ) {
     val context = LocalContext.current
-    var mostrarDialogoManual by remember { mutableStateOf(false) }
-    var textoManual by remember { mutableStateOf("") }
 
-    val scrollState = rememberScrollState()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(scrollState),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .background(AzulPrimario.copy(alpha = 0.12f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.QrCodeScanner,
-                contentDescription = null,
-                tint = AzulPrimario,
-                modifier = Modifier.size(38.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = "Lector de Códigos QR",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = AzulPrimario
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Toca el botón y apunta la cámara a un código QR educativo para acceder a la cápsula de video de IA.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = {
-                QRScannerHelper.iniciarEscaneo(
-                    context = context,
-                    onSuccess = { barcodeText ->
-                        val valido = viewModel.procesarContenidoQR(barcodeText)
-                        if (!valido) {
-                            Toast.makeText(
-                                context,
-                                "Se leyó el QR, pero no contiene un JSON válido",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    },
-                    onCanceled = {
-                        Toast.makeText(context, "Escaneo cancelado", Toast.LENGTH_SHORT).show()
-                    },
-                    onFailure = {
-                        mostrarDialogoManual = true
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Escanea el código QR", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onVolver) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
                 )
-            },
+            )
+        }
+    ) { padding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario)
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Escanear Código QR",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedButton(
-            onClick = {
-                val jsonEjemplo = """{"titulo":"Automatiza Excel con IA","descripcion":"Aprende a integrar modelos de lenguaje para clasificar datos y optimizar tareas.","url":"https://www.youtube.com/shorts/sample1"}"""
-                viewModel.procesarContenidoQR(jsonEjemplo)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MoradoIA)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Simular QR Válido (Ejemplo del Profe)")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedButton(
-            onClick = {
-                val qrInvalido = "https://www.duoc.cl"
-                val resultado = viewModel.procesarContenidoQR(qrInvalido)
-                if (!resultado) {
-                    Toast.makeText(
-                        context,
-                        "Se leyó el QR, pero no contiene un JSON válido",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(Icons.Default.Warning, contentDescription = null, tint = ErrorRojo)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Probar QR Inválido (Validación)")
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        viewModel.videoQREscaneado?.let { video ->
-            Text(
-                text = "Resultado del Escaneo:",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = AzulPrimario,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TarjetaVideo(
-                video = video,
-                puntosGanados = 40,
-                onCerrar = { viewModel.limpiarEstadoQR() }
-            )
-        }
-
-        viewModel.mensajeErrorQR?.let { errorMsg ->
-            Card(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2))
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Text(
+                    text = "Apunta la cámara al código QR del punto turístico en Santiago",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Visor de Cámara con Marco de Escaneo en Modo Claro (Limpio y blanco)
+                Box(
+                    modifier = Modifier
+                        .size(280.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xFFF1F5F9))
+                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(24.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = ErrorRojo,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = errorMsg,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ErrorRojo,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    // Marco delimitador del QR (Fondo blanco, borde azul primario)
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.White)
+                            .border(3.dp, AzulPrimario, RoundedCornerShape(18.dp))
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCode,
+                            contentDescription = "Código QR",
+                            tint = AzulPrimario.copy(alpha = 0.85f),
+                            modifier = Modifier.size(120.dp)
+                        )
+                    }
+
+                    // Indicador inferior dentro del visor (Diseño claro)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.White,
+                        shadowElevation = 3.dp,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                tint = AzulPrimario,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Detección automática por cámara",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Mensajes de error si los hay
+                viewModel.mensajeErrorQR?.let { err ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = err,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(14.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
             }
-        }
-    }
 
-    if (mostrarDialogoManual) {
-        AlertDialog(
-            onDismissRequest = { mostrarDialogoManual = false },
-            icon = {
-                Icon(Icons.Default.Info, contentDescription = null, tint = AzulPrimario)
-            },
-            title = {
-                Text("Lectura en Emulador", fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Ingresa el texto o JSON del código QR para validar:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = textoManual,
-                        onValueChange = { textoManual = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Pegar JSON o texto...") },
-                        maxLines = 4
-                    )
-                }
-            },
-            confirmButton = {
+            // Botón principal único para iniciar el escaneo real
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
                 Button(
                     onClick = {
-                        mostrarDialogoManual = false
-                        val valido = viewModel.procesarContenidoQR(textoManual)
-                        if (!valido) {
-                            Toast.makeText(
-                                context,
-                                "Se leyó el QR, pero no contiene un JSON válido",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
+                        QRScannerHelper.iniciarEscaneo(
+                            context = context,
+                            onSuccess = { textoLeido ->
+                                val ok = viewModel.procesarContenidoQR(textoLeido)
+                                if (ok) {
+                                    onEscaneoExitoso()
+                                }
+                            },
+                            onFailure = { err ->
+                                Toast.makeText(context, "Error cámara: ${err.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario)
                 ) {
-                    Text("Validar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { mostrarDialogoManual = false }) {
-                    Text("Cancelar")
+                    Icon(Icons.Default.CameraAlt, contentDescription = null)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        "Abrir Escáner de Cámara",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
             }
-        )
+        }
     }
 }

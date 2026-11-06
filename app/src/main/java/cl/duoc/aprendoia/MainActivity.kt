@@ -2,6 +2,7 @@ package cl.duoc.aprendoia
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -15,18 +16,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AddLocation
 import androidx.compose.material.icons.filled.Collections
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -53,36 +65,68 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.ui.components.animacionRotacionInfinita
+import cl.duoc.aprendoia.ui.screens.BienvenidaScreen
+import cl.duoc.aprendoia.ui.screens.ColeccionScreen
+import cl.duoc.aprendoia.ui.screens.DetallePuntoScreen
 import cl.duoc.aprendoia.ui.screens.EscaneoQRScreen
 import cl.duoc.aprendoia.ui.screens.FormularioScreen
 import cl.duoc.aprendoia.ui.screens.HistorialScreen
 import cl.duoc.aprendoia.ui.screens.HomeScreen
 import cl.duoc.aprendoia.ui.screens.LoginScreen
+import cl.duoc.aprendoia.ui.screens.MapaScreen
 import cl.duoc.aprendoia.ui.screens.MisionesScreen
+import cl.duoc.aprendoia.ui.screens.NotificacionesScreen
+import cl.duoc.aprendoia.ui.screens.PerfilConfiguracionScreen
+import cl.duoc.aprendoia.ui.screens.PuntajeProgresoScreen
+import cl.duoc.aprendoia.ui.screens.RegistroJugadorScreen
+import cl.duoc.aprendoia.ui.screens.ResultadoQRScreen
+import cl.duoc.aprendoia.ui.screens.SelfieTuristicaScreen
+import cl.duoc.aprendoia.ui.screens.VideoEducativoScreen
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AprendoIATheme
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.osmdroid.config.Configuration
 
-enum class PantallaApp {
-    INICIO,
-    MISIONES,
-    ESCANEADOR_QR,
-    HISTORIAL,
-    FORMULARIO
+enum class DestinoApp {
+    BIENVENIDA,              // 1. Bienvenida / Inicio
+    LOGIN,                   // 2. Inicio de Sesión
+    REGISTRO_JUGADOR,        // 3. Registro de Jugador
+    DASHBOARD,               // 4. Principal / Dashboard
+    MAPA,                    // 5. Mapa de Santiago
+    DETALLE_PUNTO,           // 6. Detalle del Punto
+    ESCANER_QR,              // 7. Escáner QR
+    RESULTADO_QR,            // 8. Resultado del QR
+    VIDEO_EDUCATIVO,         // 9. Video Educativo
+    SELFIE_TURISTICA,        // 10. Selfie Turística
+    COLECCION,               // 11. Colección de Descubrimientos
+    PUNTAJE_PROGRESO,        // 12. Puntaje y Progreso
+    HISTORIAL,               // 13. Historial de Actividades
+    NOTIFICACIONES,          // 14. Notificaciones
+    PERFIL_CONFIGURACION,    // 15. Perfil y Configuración
+    MISIONES_LISTA,          // Lista de misiones
+    FORMULARIO_ADMIN         // Formulario nuevo punto (Admin)
 }
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Configuración crítica de osmdroid para permitir descargar las calles de OpenStreetMap
+        Configuration.getInstance().userAgentValue = packageName
+        Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE))
+
         enableEdgeToEdge()
 
         setContent {
@@ -92,78 +136,139 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val appViewModel: AprendoIAViewModel = viewModel()
-
-                    if (!appViewModel.estaAutenticado) {
-                        LoginScreen(
-                            viewModel = appViewModel
-                        )
-                    } else {
-                        MainContainer(viewModel = appViewModel)
-                    }
+                    EnrutadorPrincipal(viewModel = appViewModel)
                 }
             }
         }
     }
 }
 
+@Composable
+fun EnrutadorPrincipal(viewModel: AprendoIAViewModel) {
+    // Si ya está autenticado, va al Dashboard; si no, empieza en Bienvenida
+    var destinoActual by remember {
+        mutableStateOf(if (viewModel.estaAutenticado) DestinoApp.DASHBOARD else DestinoApp.BIENVENIDA)
+    }
+
+    when (destinoActual) {
+        DestinoApp.BIENVENIDA -> {
+            BienvenidaScreen(
+                onComenzar = { destinoActual = DestinoApp.LOGIN },
+                onYaTengoCuenta = { destinoActual = DestinoApp.LOGIN }
+            )
+        }
+        DestinoApp.LOGIN -> {
+            LoginScreen(
+                viewModel = viewModel,
+                onLoginExitoso = { destinoActual = DestinoApp.DASHBOARD },
+                onIrARegistro = { destinoActual = DestinoApp.REGISTRO_JUGADOR }
+            )
+        }
+        DestinoApp.REGISTRO_JUGADOR -> {
+            RegistroJugadorScreen(
+                onRegistroExitoso = { destinoActual = DestinoApp.DASHBOARD },
+                onVolver = { destinoActual = DestinoApp.LOGIN },
+                onCrearJugador = { nom, mail, tel, pass, dir, av ->
+                    viewModel.registrarNuevoJugador(nom, mail, tel, pass, dir, av)
+                }
+            )
+        }
+        else -> {
+            // Contenedor principal con Navegación para las pantallas 4 a 15
+            ContenedorConNavegacion(
+                viewModel = viewModel,
+                destinoActual = destinoActual,
+                onCambiarDestino = { destinoActual = it },
+                onCerrarSesion = {
+                    viewModel.cerrarSesion()
+                    destinoActual = DestinoApp.LOGIN
+                }
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainContainer(viewModel: AprendoIAViewModel) {
-    var pantallaActual by remember { mutableStateOf(PantallaApp.INICIO) }
+fun ContenedorConNavegacion(
+    viewModel: AprendoIAViewModel,
+    destinoActual: DestinoApp,
+    onCambiarDestino: (DestinoApp) -> Unit,
+    onCerrarSesion: () -> Unit
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val usuario = viewModel.usuarioActual
+
+    BackHandler(enabled = drawerState.isOpen || destinoActual != DestinoApp.DASHBOARD) {
+        if (drawerState.isOpen) {
+            coroutineScope.launch { drawerState.close() }
+        } else {
+            onCambiarDestino(DestinoApp.DASHBOARD)
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet {
+                // Cabecera del usuario
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(AzulPrimario)
-                        .padding(24.dp)
+                        .padding(22.dp)
                 ) {
                     Column {
-                        Text(
-                            text = "Aprendo IA",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Duoc UC • Santiago",
-                            color = Color.White.copy(alpha = 0.85f),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = viewModel.usuarioActual?.nombre ?: "Estudiante",
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.25f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Face, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = usuario?.nombre ?: "Jugador",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Rol: ${usuario?.rol ?: "Cliente"} • ${usuario?.puntaje ?: 0} pts",
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
+                // Items del Drawer
                 NavigationDrawerItem(
-                    label = { Text("Inicio") },
+                    label = { Text("Inicio / Dashboard") },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    selected = pantallaActual == PantallaApp.INICIO,
+                    selected = destinoActual == DestinoApp.DASHBOARD,
                     onClick = {
-                        pantallaActual = PantallaApp.INICIO
+                        onCambiarDestino(DestinoApp.DASHBOARD)
                         coroutineScope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
                 NavigationDrawerItem(
-                    label = { Text("Misiones en Santiago") },
-                    icon = { Icon(Icons.Default.Place, contentDescription = null) },
-                    selected = pantallaActual == PantallaApp.MISIONES,
+                    label = { Text("Mapa de Santiago (osmdroid)") },
+                    icon = { Icon(Icons.Default.Map, contentDescription = null) },
+                    selected = destinoActual == DestinoApp.MAPA,
                     onClick = {
-                        pantallaActual = PantallaApp.MISIONES
+                        onCambiarDestino(DestinoApp.MAPA)
                         coroutineScope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -172,9 +277,9 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                 NavigationDrawerItem(
                     label = { Text("Escanear Código QR") },
                     icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
-                    selected = pantallaActual == PantallaApp.ESCANEADOR_QR,
+                    selected = destinoActual == DestinoApp.ESCANER_QR,
                     onClick = {
-                        pantallaActual = PantallaApp.ESCANEADOR_QR
+                        onCambiarDestino(DestinoApp.ESCANER_QR)
                         coroutineScope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -183,35 +288,93 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                 NavigationDrawerItem(
                     label = { Text("Colección de Descubrimientos") },
                     icon = { Icon(Icons.Default.Collections, contentDescription = null) },
-                    selected = pantallaActual == PantallaApp.HISTORIAL,
+                    selected = destinoActual == DestinoApp.COLECCION,
                     onClick = {
-                        pantallaActual = PantallaApp.HISTORIAL
+                        onCambiarDestino(DestinoApp.COLECCION)
                         coroutineScope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
                 NavigationDrawerItem(
-                    label = { Text("Registrar Nuevo Punto") },
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    selected = pantallaActual == PantallaApp.FORMULARIO,
+                    label = { Text("Puntaje y Progreso") },
+                    icon = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
+                    selected = destinoActual == DestinoApp.PUNTAJE_PROGRESO,
                     onClick = {
-                        pantallaActual = PantallaApp.FORMULARIO
+                        onCambiarDestino(DestinoApp.PUNTAJE_PROGRESO)
                         coroutineScope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                NavigationDrawerItem(
+                    label = { Text("Historial de Actividades") },
+                    icon = { Icon(Icons.Default.History, contentDescription = null) },
+                    selected = destinoActual == DestinoApp.HISTORIAL,
+                    onClick = {
+                        onCambiarDestino(DestinoApp.HISTORIAL)
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Notificaciones") },
+                    icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                    selected = destinoActual == DestinoApp.NOTIFICACIONES,
+                    onClick = {
+                        onCambiarDestino(DestinoApp.NOTIFICACIONES)
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Mi Perfil y Ajustes") },
+                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    selected = destinoActual == DestinoApp.PERFIL_CONFIGURACION,
+                    onClick = {
+                        onCambiarDestino(DestinoApp.PERFIL_CONFIGURACION)
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Misiones en Lista") },
+                    icon = { Icon(Icons.Default.Place, contentDescription = null) },
+                    selected = destinoActual == DestinoApp.MISIONES_LISTA,
+                    onClick = {
+                        onCambiarDestino(DestinoApp.MISIONES_LISTA)
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                if (usuario?.rol == "Admin") {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    NavigationDrawerItem(
+                        label = { Text("Registrar Punto GPS (Admin)") },
+                        icon = { Icon(Icons.Default.AddLocation, contentDescription = null) },
+                        selected = destinoActual == DestinoApp.FORMULARIO_ADMIN,
+                        onClick = {
+                            onCambiarDestino(DestinoApp.FORMULARIO_ADMIN)
+                            coroutineScope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 NavigationDrawerItem(
                     label = { Text("Cerrar Sesión", color = MaterialTheme.colorScheme.error) },
-                    icon = { Icon(Icons.Default.Close, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                     selected = false,
                     onClick = {
                         coroutineScope.launch {
                             drawerState.close()
-                            viewModel.cerrarSesion()
+                            onCerrarSesion()
                         }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -223,20 +386,28 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
             topBar = {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text(
-                                text = when (pantallaActual) {
-                                    PantallaApp.INICIO -> "Aprendo IA"
-                                    PantallaApp.MISIONES -> "Misiones en Santiago"
-                                    PantallaApp.ESCANEADOR_QR -> "Escanear QR"
-                                    PantallaApp.HISTORIAL -> "Descubrimientos"
-                                    PantallaApp.FORMULARIO -> "Nuevo Punto"
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
+                        Text(
+                            text = when (destinoActual) {
+                                DestinoApp.DASHBOARD -> "Aprendo IA"
+                                DestinoApp.MAPA -> "Mapa de Santiago"
+                                DestinoApp.DETALLE_PUNTO -> "Detalle del Punto"
+                                DestinoApp.ESCANER_QR -> "Escanear QR"
+                                DestinoApp.RESULTADO_QR -> "Resultado QR"
+                                DestinoApp.VIDEO_EDUCATIVO -> "Video Educativo"
+                                DestinoApp.SELFIE_TURISTICA -> "Selfie Turística"
+                                DestinoApp.COLECCION -> "Mis Descubrimientos"
+                                DestinoApp.PUNTAJE_PROGRESO -> "Mi Progreso"
+                                DestinoApp.HISTORIAL -> "Historial"
+                                DestinoApp.NOTIFICACIONES -> "Notificaciones"
+                                DestinoApp.PERFIL_CONFIGURACION -> "Mi Perfil"
+                                DestinoApp.MISIONES_LISTA -> "Misiones en Santiago"
+                                DestinoApp.FORMULARIO_ADMIN -> "Nuevo Punto en Terreno"
+                                else -> "Aprendo IA"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
@@ -244,10 +415,27 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                         }
                     },
                     actions = {
-                        Box(
+                        // Badge de Notificaciones
+                        IconButton(onClick = { onCambiarDestino(DestinoApp.NOTIFICACIONES) }) {
+                            BadgedBox(
+                                badge = {
+                                    if (viewModel.notificaciones.isNotEmpty()) {
+                                        Badge { Text("${viewModel.notificaciones.size}") }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Notifications, contentDescription = "Notificaciones", tint = Color.White)
+                            }
+                        }
+
+                        // Badge de Puntos
+                        Surface(
                             modifier = Modifier
-                                .background(AmarilloPuntos, shape = RoundedCornerShape(10.dp))
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AmarilloPuntos)
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = Color.Transparent,
+                            onClick = { onCambiarDestino(DestinoApp.PUNTAJE_PROGRESO) }
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -258,7 +446,7 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "${viewModel.usuarioActual?.puntaje ?: 0} pts",
+                                    text = "${usuario?.puntaje ?: 0} pts",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelSmall
@@ -266,11 +454,12 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                             }
                         }
 
+                        // Botón de sincronización
                         IconButton(
                             onClick = {
                                 coroutineScope.launch {
                                     viewModel.sincronizarDatos()
-                                    delay(1200)
+                                    delay(800)
                                     viewModel.finalizarSincronizacion()
                                 }
                             }
@@ -287,37 +476,38 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                 )
             },
 
+            // Barra Inferior de 5 Ítems según el PDF (Inicio, Mapa, Escanear QR, Colección, Perfil)
             bottomBar = {
                 NavigationBar {
                     NavigationBarItem(
-                        selected = pantallaActual == PantallaApp.INICIO,
-                        onClick = { pantallaActual = PantallaApp.INICIO },
-                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        selected = destinoActual == DestinoApp.DASHBOARD,
+                        onClick = { onCambiarDestino(DestinoApp.DASHBOARD) },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
                         label = { Text("Inicio") }
                     )
                     NavigationBarItem(
-                        selected = pantallaActual == PantallaApp.MISIONES,
-                        onClick = { pantallaActual = PantallaApp.MISIONES },
-                        icon = { Icon(Icons.Default.Place, contentDescription = null) },
-                        label = { Text("Misiones") }
+                        selected = destinoActual == DestinoApp.MAPA,
+                        onClick = { onCambiarDestino(DestinoApp.MAPA) },
+                        icon = { Icon(Icons.Default.Map, contentDescription = "Mapa") },
+                        label = { Text("Mapa") }
                     )
                     NavigationBarItem(
-                        selected = pantallaActual == PantallaApp.ESCANEADOR_QR,
-                        onClick = { pantallaActual = PantallaApp.ESCANEADOR_QR },
-                        icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
-                        label = { Text("QR") }
+                        selected = destinoActual == DestinoApp.ESCANER_QR,
+                        onClick = { onCambiarDestino(DestinoApp.ESCANER_QR) },
+                        icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = "QR") },
+                        label = { Text("Escanear QR") }
                     )
                     NavigationBarItem(
-                        selected = pantallaActual == PantallaApp.HISTORIAL,
-                        onClick = { pantallaActual = PantallaApp.HISTORIAL },
-                        icon = { Icon(Icons.Default.Collections, contentDescription = null) },
-                        label = { Text("Descubrimientos") }
+                        selected = destinoActual == DestinoApp.COLECCION,
+                        onClick = { onCambiarDestino(DestinoApp.COLECCION) },
+                        icon = { Icon(Icons.Default.Collections, contentDescription = "Colección") },
+                        label = { Text("Colección") }
                     )
                     NavigationBarItem(
-                        selected = pantallaActual == PantallaApp.FORMULARIO,
-                        onClick = { pantallaActual = PantallaApp.FORMULARIO },
-                        icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                        label = { Text("Formulario") }
+                        selected = destinoActual == DestinoApp.PERFIL_CONFIGURACION,
+                        onClick = { onCambiarDestino(DestinoApp.PERFIL_CONFIGURACION) },
+                        icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+                        label = { Text("Perfil") }
                     )
                 }
             }
@@ -327,27 +517,124 @@ fun MainContainer(viewModel: AprendoIAViewModel) {
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                when (pantallaActual) {
-                    PantallaApp.INICIO -> HomeScreen(
+                when (destinoActual) {
+                    DestinoApp.DASHBOARD -> HomeScreen(
                         viewModel = viewModel,
-                        onIrAMisiones = { pantallaActual = PantallaApp.MISIONES },
-                        onIrAFormulario = { pantallaActual = PantallaApp.FORMULARIO }
-                    )
-                    PantallaApp.MISIONES -> MisionesScreen(
-                        viewModel = viewModel
-                    )
-                    PantallaApp.ESCANEADOR_QR -> EscaneoQRScreen(
-                        viewModel = viewModel
-                    )
-                    PantallaApp.HISTORIAL -> HistorialScreen(
-                        viewModel = viewModel
-                    )
-                    PantallaApp.FORMULARIO -> FormularioScreen(
-                        viewModel = viewModel,
-                        onRegistroCompletado = {
-                            pantallaActual = PantallaApp.MISIONES
+                        onNavegarAMapa = { onCambiarDestino(DestinoApp.MAPA) },
+                        onNavegarAEscanerQR = { onCambiarDestino(DestinoApp.ESCANER_QR) },
+                        onNavegarAColeccion = { onCambiarDestino(DestinoApp.COLECCION) },
+                        onNavegarAPuntoDetalle = { p ->
+                            viewModel.puntoSeleccionado = p
+                            onCambiarDestino(DestinoApp.DETALLE_PUNTO)
                         }
                     )
+
+                    DestinoApp.MAPA -> MapaScreen(
+                        viewModel = viewModel,
+                        onVerDetallePunto = { p ->
+                            viewModel.puntoSeleccionado = p
+                            onCambiarDestino(DestinoApp.DETALLE_PUNTO)
+                        }
+                    )
+
+                    DestinoApp.DETALLE_PUNTO -> {
+                        val punto = viewModel.puntoSeleccionado ?: viewModel.puntosSantiago.firstOrNull()
+                        if (punto != null) {
+                            DetallePuntoScreen(
+                                punto = punto,
+                                onVolver = { onCambiarDestino(DestinoApp.MAPA) },
+                                onIrAEscanerQR = { onCambiarDestino(DestinoApp.ESCANER_QR) },
+                                onIrASelfie = { onCambiarDestino(DestinoApp.SELFIE_TURISTICA) },
+                                onIrAVideo = { onCambiarDestino(DestinoApp.VIDEO_EDUCATIVO) },
+                                onVerEnMapa = { onCambiarDestino(DestinoApp.MAPA) }
+                            )
+                        } else {
+                            onCambiarDestino(DestinoApp.MAPA)
+                        }
+                    }
+
+                    DestinoApp.ESCANER_QR -> EscaneoQRScreen(
+                        viewModel = viewModel,
+                        onEscaneoExitoso = { onCambiarDestino(DestinoApp.RESULTADO_QR) },
+                        onVolver = { onCambiarDestino(DestinoApp.DASHBOARD) }
+                    )
+
+                    DestinoApp.RESULTADO_QR -> ResultadoQRScreen(
+                        punto = viewModel.puntoSeleccionado,
+                        video = viewModel.videoQREscaneado,
+                        onVerVideo = { onCambiarDestino(DestinoApp.VIDEO_EDUCATIVO) },
+                        onTomarSelfie = { onCambiarDestino(DestinoApp.SELFIE_TURISTICA) },
+                        onVolverAlMapa = { onCambiarDestino(DestinoApp.MAPA) }
+                    )
+
+                    DestinoApp.VIDEO_EDUCATIVO -> VideoEducativoScreen(
+                        punto = viewModel.puntoSeleccionado,
+                        onVolver = { onCambiarDestino(DestinoApp.COLECCION) },
+                        onMarcarVisto = { pId -> viewModel.marcarVideoVisto(pId) }
+                    )
+
+                    DestinoApp.SELFIE_TURISTICA -> SelfieTuristicaScreen(
+                        punto = viewModel.puntoSeleccionado,
+                        onSelfieRegistrada = { uri ->
+                            viewModel.puntoSeleccionado?.let { p ->
+                                viewModel.registrarSelfieTuristica(p.id, uri?.toString())
+                            }
+                            onCambiarDestino(DestinoApp.PUNTAJE_PROGRESO)
+                        },
+                        onVolver = { onCambiarDestino(DestinoApp.DETALLE_PUNTO) }
+                    )
+
+                    DestinoApp.COLECCION -> ColeccionScreen(
+                        viewModel = viewModel,
+                        onAbrirVideo = { p ->
+                            viewModel.puntoSeleccionado = p
+                            onCambiarDestino(DestinoApp.VIDEO_EDUCATIVO)
+                        }
+                    )
+
+                    DestinoApp.PUNTAJE_PROGRESO -> PuntajeProgresoScreen(
+                        viewModel = viewModel,
+                        onVolver = { onCambiarDestino(DestinoApp.DASHBOARD) }
+                    )
+
+                    DestinoApp.HISTORIAL -> HistorialScreen(
+                        viewModel = viewModel
+                    )
+
+                    DestinoApp.NOTIFICACIONES -> NotificacionesScreen(
+                        notificaciones = viewModel.notificaciones,
+                        onVolver = { onCambiarDestino(DestinoApp.DASHBOARD) },
+                        onSeleccionarNotificacion = { notif ->
+                            if (notif.puntoIdDestino != null) {
+                                val p = viewModel.puntosSantiago.firstOrNull { it.id == notif.puntoIdDestino }
+                                if (p != null) {
+                                    viewModel.puntoSeleccionado = p
+                                    onCambiarDestino(DestinoApp.DETALLE_PUNTO)
+                                } else {
+                                    onCambiarDestino(DestinoApp.MAPA)
+                                }
+                            } else {
+                                onCambiarDestino(DestinoApp.MAPA)
+                            }
+                        }
+                    )
+
+                    DestinoApp.PERFIL_CONFIGURACION -> PerfilConfiguracionScreen(
+                        viewModel = viewModel,
+                        onCerrarSesion = onCerrarSesion,
+                        onIrAFormularioAdmin = { onCambiarDestino(DestinoApp.FORMULARIO_ADMIN) }
+                    )
+
+                    DestinoApp.MISIONES_LISTA -> MisionesScreen(
+                        viewModel = viewModel
+                    )
+
+                    DestinoApp.FORMULARIO_ADMIN -> FormularioScreen(
+                        viewModel = viewModel,
+                        onRegistroCompletado = { onCambiarDestino(DestinoApp.MAPA) }
+                    )
+
+                    else -> Unit
                 }
             }
         }

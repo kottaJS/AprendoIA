@@ -1,8 +1,5 @@
 package cl.duoc.aprendoia.ui.screens
 
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,133 +14,137 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import cl.duoc.aprendoia.model.PuntoInteres
-import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
+import androidx.compose.ui.unit.sp
+import cl.duoc.aprendoia.model.HistorialItem
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
-import cl.duoc.aprendoia.ui.theme.MoradoIA
-import cl.duoc.aprendoia.ui.theme.VerdeExito
+import cl.duoc.aprendoia.ui.theme.VerdeCompletado
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
 @Composable
 fun HistorialScreen(
     viewModel: AprendoIAViewModel
 ) {
-    val context = LocalContext.current
-    val puntosDescubiertos = viewModel.puntosSantiago.filter { it.completada || it.selfieTomada }
+    var filtroTipo by remember { mutableStateOf("Todos") } // "Todos", "QR", "Videos", "Selfies"
+
+    val itemsHistorial = viewModel.historial
+    val itemsFiltrados = remember(itemsHistorial, filtroTipo) {
+        when (filtroTipo) {
+            "QR" -> itemsHistorial.filter { it.tipo.equals("QR", ignoreCase = true) }
+            "Videos" -> itemsHistorial.filter { it.tipo.equals("Video", ignoreCase = true) }
+            "Selfies" -> itemsHistorial.filter { it.tipo.equals("Selfie", ignoreCase = true) }
+            else -> itemsHistorial
+        }
+    }
+
+    // Agrupar por fecha
+    val agrupadosPorFecha = remember(itemsFiltrados) {
+        itemsFiltrados.groupBy { it.fecha }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
         Text(
-            text = "Colección de Descubrimientos",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            text = "Historial de Actividades",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             color = AzulPrimario
         )
-
         Text(
-            text = "Registro de códigos QR y selfies turísticas validadas en terreno.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray
+            text = "Registro cronológico de tus descubrimientos en Santiago",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        Card(
+        // Filtros
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = AzulPrimario)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${viewModel.puntosSantiago.count { it.completada }}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+            listOf("Todos", "QR", "Videos", "Selfies").forEach { f ->
+                val sel = filtroTipo == f
+                FilterChip(
+                    selected = sel,
+                    onClick = { filtroTipo = f },
+                    label = { Text(f, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = AzulPrimario,
+                        selectedLabelColor = Color.White
                     )
-                    Text("QRs Capturados", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${viewModel.puntosSantiago.count { it.selfieTomada }}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text("Selfies Validadas", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${viewModel.usuarioActual?.puntaje ?: 0}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = AmarilloPuntos
-                    )
-                    Text("Puntos Totales", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
-                }
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        if (puntosDescubiertos.isEmpty()) {
+        if (agrupadosPorFecha.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Aún no has completado misiones.\n¡Ve a 'Misiones en Santiago' y captura tu primer QR!",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = null,
+                        modifier = Modifier.size(60.dp),
+                        tint = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No hay actividades registradas aún",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                items(puntosDescubiertos, key = { it.id }) { punto ->
-                    TarjetaDescubrimiento(
-                        punto = punto,
-                        onVerVideo = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(punto.urlVideo))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                            }
-                        }
-                    )
+                agrupadosPorFecha.forEach { (fecha, actividades) ->
+                    item {
+                        Text(
+                            text = fecha,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+
+                    items(actividades) { item ->
+                        HistorialFila(item)
+                    }
                 }
             }
         }
@@ -151,79 +152,70 @@ fun HistorialScreen(
 }
 
 @Composable
-fun TarjetaDescubrimiento(
-    punto: PuntoInteres,
-    onVerVideo: () -> Unit
-) {
+private fun HistorialFila(item: HistorialItem) {
+    val icono = when (item.tipo) {
+        "Selfie" -> Icons.Default.CameraAlt
+        "Video" -> Icons.Default.PlayCircleOutline
+        else -> Icons.Default.QrCodeScanner
+    }
+    val colorIcono = when (item.tipo) {
+        "Selfie" -> VerdeCompletado
+        "Video" -> Color(0xFF7E57C2)
+        else -> AzulPrimario
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (punto.selfieTomada && punto.selfieBitmap != null) {
-                Image(
-                    bitmap = punto.selfieBitmap.asImageBitmap(),
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(colorIcono.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icono,
                     contentDescription = null,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
+                    tint = colorIcono,
+                    modifier = Modifier.size(24.dp)
                 )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(VerdeExito.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCode,
-                        contentDescription = null,
-                        tint = VerdeExito,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = punto.nombre,
+                    text = item.titulo,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = AzulPrimario
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${punto.categoriaIA} • ${punto.comuna}",
+                    text = item.lugar,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Star, contentDescription = null, tint = AmarilloPuntos, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "+${punto.puntosRecompensa} pts",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = VerdeExito
-                    )
-                }
+                Text(
+                    text = "${item.fecha} • ${item.hora}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
 
-            IconButton(onClick = onVerVideo) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Ver Video",
-                    tint = MoradoIA,
-                    modifier = Modifier.size(28.dp)
+            if (item.puntos > 0) {
+                Text(
+                    text = "+${item.puntos} pts",
+                    fontWeight = FontWeight.Bold,
+                    color = colorIcono,
+                    style = MaterialTheme.typography.titleSmall
                 )
             }
         }

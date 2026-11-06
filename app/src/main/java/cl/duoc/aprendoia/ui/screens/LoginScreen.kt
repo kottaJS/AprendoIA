@@ -4,24 +4,33 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,24 +46,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
-import cl.duoc.aprendoia.ui.theme.AprendoIATheme
+import androidx.compose.ui.unit.sp
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
 
 @Composable
 fun LoginScreen(
-    viewModel: AprendoIAViewModel? = null,
-    onLoginExitoso: ((email: String, password: String) -> Unit)? = null
+    viewModel: AprendoIAViewModel,
+    onLoginExitoso: () -> Unit,
+    onIrARegistro: () -> Unit
 ) {
-    var email by remember { mutableStateOf("test@duocuc.cl") }
-    var password by remember { mutableStateOf("123456") }
-    var esModoRegistro by remember { mutableStateOf(false) }
-    var nombreRegistro by remember { mutableStateOf("") }
+    var emailOrAlias by remember { mutableStateOf("test@duocuc.cl") }
+    var password by remember { mutableStateOf("123") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var errorMensaje by remember { mutableStateOf<String?>(null) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -63,22 +72,25 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Spacer(modifier = Modifier.height(20.dp))
 
+            // Logo
             Box(
                 modifier = Modifier
-                    .size(72.dp)
-                    .background(MoradoIA.copy(alpha = 0.12f), shape = CircleShape),
+                    .size(80.dp)
+                    .background(AzulPrimario, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Usuario",
-                    tint = MoradoIA,
-                    modifier = Modifier.size(40.dp)
+                    imageVector = Icons.Default.School,
+                    contentDescription = "Logo Aprendo IA",
+                    tint = Color.White,
+                    modifier = Modifier.size(46.dp)
                 )
             }
 
@@ -86,138 +98,172 @@ fun LoginScreen(
 
             Text(
                 text = "Aprendo IA",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
                 color = AzulPrimario
             )
 
             Text(
-                text = "Plataforma Móvil Gamificada • Duoc UC",
+                text = "Inicia sesión para explorar Santiago y aprender de IA",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Campo Correo o Alias
+            OutlinedTextField(
+                value = emailOrAlias,
+                onValueChange = {
+                    emailOrAlias = it
+                    errorMensaje = null
+                },
+                label = { Text("Correo o Alias") },
+                placeholder = { Text("test@duocuc.cl o Admin") },
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Campo Contraseña
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    errorMensaje = null
+                },
+                label = { Text("Contraseña") },
+                placeholder = { Text("Contraseña") },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = null
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            )
+
+            if (errorMensaje != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = errorMensaje ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Botón Iniciar Sesión
+            Button(
+                onClick = {
+                    if (emailOrAlias.isBlank() || password.isBlank()) {
+                        errorMensaje = "Por favor completa todos los campos"
+                        return@Button
+                    }
+                    val ok = viewModel.iniciarSesionConCredenciales(emailOrAlias, password)
+                    if (ok) {
+                        onLoginExitoso()
+                    } else {
+                        errorMensaje = "Credenciales incorrectas (la clave por defecto es 123)"
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario)
+            ) {
+                Text(
+                    text = "Iniciar Sesión",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Botón Registrarse
+            TextButton(onClick = onIrARegistro) {
+                Text(
+                    text = "¿No tienes cuenta? Regístrate aquí",
+                    color = AzulPrimario,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Accesos Rápidos para demostración y evaluación
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
                     Text(
-                        text = if (esModoRegistro) "Crear Cuenta" else "Iniciar Sesión",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Accesos rápidos de evaluación:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (esModoRegistro) {
-                        OutlinedTextField(
-                            value = nombreRegistro,
-                            onValueChange = { nombreRegistro = it },
-                            label = { Text("Nombre Completo") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
-
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                            viewModel?.loginEmailError = null
-                        },
-                        label = { Text("Correo Electrónico") },
-                        isError = viewModel?.loginEmailError != null,
-                        supportingText = {
-                            viewModel?.loginEmailError?.let { err ->
-                                Text(text = err, color = MaterialTheme.colorScheme.error)
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = AzulPrimario)
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            viewModel?.loginPasswordError = null
-                        },
-                        label = { Text("Contraseña") },
-                        isError = viewModel?.loginPasswordError != null,
-                        supportingText = {
-                            viewModel?.loginPasswordError?.let { err ->
-                                Text(text = err, color = MaterialTheme.colorScheme.error)
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Edit, contentDescription = null, tint = AzulPrimario)
-                        },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = {
-                            if (viewModel != null) {
-                                viewModel.validarLogin(email, password)
-                            } else {
-                                onLoginExitoso?.invoke(email, password)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .animacionLatidoInfinito(activo = email.isNotEmpty() && password.isNotEmpty()),
-                        colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario),
-                        shape = RoundedCornerShape(12.dp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = if (esModoRegistro) "Registrarse" else "Ingresar",
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.iniciarSesionConCredenciales("test@duocuc.cl", "123")
+                                onLoginExitoso()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Estudiante", fontSize = 12.sp)
+                        }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.iniciarSesionConCredenciales("Admin", "123")
+                                onLoginExitoso()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Admin", fontSize = 12.sp)
+                        }
 
-                    TextButton(
-                        onClick = { esModoRegistro = !esModoRegistro }
-                    ) {
-                        Text(
-                            text = if (esModoRegistro) "¿Ya tienes cuenta? Inicia sesión" else "¿No tienes cuenta? Regístrate",
-                            color = MoradoIA
-                        )
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.iniciarSesionConCredenciales("GenCont", "123")
+                                onLoginExitoso()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Contenido", fontSize = 12.sp)
+                        }
                     }
                 }
             }
-        }
-    }
-}
 
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    AprendoIATheme {
-        LoginScreen()
+            Spacer(modifier = Modifier.height(20.dp))
+        }
     }
 }
