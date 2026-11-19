@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.ui.components.TarjetaVideo
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
@@ -61,11 +62,11 @@ import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.VerdeExito
 import cl.duoc.aprendoia.util.QRScannerHelper
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.MisionesViewModel
 
 @Composable
 fun MisionesScreen(
-    viewModel: AprendoIAViewModel
+    viewModel: MisionesViewModel = viewModel()
 ) {
     var puntoDetalle by remember { mutableStateOf<PuntoInteres?>(null) }
     val context = LocalContext.current

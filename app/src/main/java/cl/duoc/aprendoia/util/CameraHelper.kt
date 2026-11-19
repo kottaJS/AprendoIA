@@ -18,8 +18,20 @@ const val CARPETA_FOTOS_TURISTICAS = "AprendoIA_Selfies"
 
 fun Context.crearArchivoSelfieTemporal(nombre: String = "selfie_temp.jpg"): File {
     val carpeta = File(cacheDir, "fotos")
-    carpeta.mkdirs()
-    return File(carpeta, nombre)
+    if (!carpeta.exists()) {
+        carpeta.mkdirs()
+    }
+    val archivo = File(carpeta, nombre)
+    try {
+        if (archivo.exists()) {
+            archivo.delete()
+        }
+        archivo.createNewFile()
+    } catch (e: Exception) {
+        // Fallback en cache directo si falla la subcarpeta
+        return File(cacheDir, nombre)
+    }
+    return archivo
 }
 
 fun Context.uriCompartible(archivo: File): Uri {
@@ -27,6 +39,9 @@ fun Context.uriCompartible(archivo: File): Uri {
 }
 
 fun Context.guardarSelfieEnGaleria(archivo: File): Uri? {
+    if (!archivo.exists() || archivo.length() == 0L) {
+        return null
+    }
     val fecha = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
     val nombre = "SELFIE_$fecha.jpg"
 

@@ -47,16 +47,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.AzulSecundario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
+import cl.duoc.aprendoia.viewmodel.DetallePuntoViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetallePuntoScreen(
     punto: PuntoInteres,
+    viewModel: DetallePuntoViewModel = viewModel(),
     onVolver: () -> Unit,
     onIrAEscanerQR: () -> Unit,
     onIrASelfie: () -> Unit,

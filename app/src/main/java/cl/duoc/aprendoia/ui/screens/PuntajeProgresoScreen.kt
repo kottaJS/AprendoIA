@@ -44,24 +44,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.PuntajeProgresoViewModel
 
 private const val PUNTAJE_MAXIMO_META = 10000
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PuntajeProgresoScreen(
-    viewModel: AprendoIAViewModel,
+    viewModel: PuntajeProgresoViewModel = viewModel(),
     onVolver: () -> Unit
 ) {
-    val usuario = viewModel.usuarioActual
-    val puntajeTotal = usuario?.puntaje ?: 0
-    val qrCount = usuario?.qrEncontrados ?: viewModel.puntosSantiago.count { it.completada }
-    val videosCount = viewModel.puntosSantiago.count { it.videoVisto }
-    val selfiesCount = viewModel.puntosSantiago.count { it.selfieTomada }
+    val usuario = viewModel.usuario
+    val puntajeTotal = viewModel.puntaje
+    val qrCount = viewModel.puntosCompletados
+    val videosCount = viewModel.videosVistos
+    val selfiesCount = viewModel.selfiesTomadas
 
     val puntosPorQR = qrCount * 10
     val puntosPorSelfie = selfiesCount * 100
@@ -113,7 +115,9 @@ fun PuntajeProgresoScreen(
                         imageVector = Icons.Default.EmojiEvents,
                         contentDescription = null,
                         tint = AmarilloPuntos,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier
+                            .size(32.dp)
+                            .animacionLatidoInfinito(true)
                     )
                     Text(
                         text = "$puntajeTotal",

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,10 +35,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,21 +45,17 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
-import cl.duoc.aprendoia.ui.theme.MoradoIA
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.LoginViewModel
 
 @Composable
 fun LoginScreen(
-    viewModel: AprendoIAViewModel,
+    viewModel: LoginViewModel = viewModel(),
     onLoginExitoso: () -> Unit,
     onIrARegistro: () -> Unit
 ) {
-    var emailOrAlias by remember { mutableStateOf("test@duocuc.cl") }
-    var password by remember { mutableStateOf("123") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var errorMensaje by remember { mutableStateOf<String?>(null) }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -79,10 +70,11 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Logo
+            // Logo animado con Latido
             Box(
                 modifier = Modifier
                     .size(80.dp)
+                    .animacionLatidoInfinito(true)
                     .background(AzulPrimario, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -113,11 +105,8 @@ fun LoginScreen(
 
             // Campo Correo o Alias
             OutlinedTextField(
-                value = emailOrAlias,
-                onValueChange = {
-                    emailOrAlias = it
-                    errorMensaje = null
-                },
+                value = viewModel.emailOrAlias,
+                onValueChange = { viewModel.onEmailChange(it) },
                 label = { Text("Correo o Alias") },
                 placeholder = { Text("test@duocuc.cl o Admin") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
@@ -130,33 +119,30 @@ fun LoginScreen(
 
             // Campo Contraseña
             OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    errorMensaje = null
-                },
+                value = viewModel.password,
+                onValueChange = { viewModel.onPasswordChange(it) },
                 label = { Text("Contraseña") },
                 placeholder = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(onClick = { viewModel.togglePasswordVisibility() }) {
                         Icon(
-                            if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            if (viewModel.passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                visualTransformation = if (viewModel.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
             )
 
-            if (errorMensaje != null) {
+            if (viewModel.errorMensaje != null) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = errorMensaje ?: "",
+                    text = viewModel.errorMensaje ?: "",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -167,15 +153,8 @@ fun LoginScreen(
             // Botón Iniciar Sesión
             Button(
                 onClick = {
-                    if (emailOrAlias.isBlank() || password.isBlank()) {
-                        errorMensaje = "Por favor completa todos los campos"
-                        return@Button
-                    }
-                    val ok = viewModel.iniciarSesionConCredenciales(emailOrAlias, password)
-                    if (ok) {
+                    if (viewModel.autenticar()) {
                         onLoginExitoso()
-                    } else {
-                        errorMensaje = "Credenciales incorrectas (la clave por defecto es 123)"
                     }
                 },
                 modifier = Modifier
@@ -204,7 +183,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Accesos Rápidos para demostración y evaluación
+            // Accesos Rápidos para evaluación de roles
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
@@ -229,8 +208,8 @@ fun LoginScreen(
                     ) {
                         OutlinedButton(
                             onClick = {
-                                viewModel.iniciarSesionConCredenciales("test@duocuc.cl", "123")
-                                onLoginExitoso()
+                                viewModel.setAccesoRapido("test@duocuc.cl", "123")
+                                if (viewModel.autenticar()) onLoginExitoso()
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp)
@@ -240,8 +219,8 @@ fun LoginScreen(
 
                         OutlinedButton(
                             onClick = {
-                                viewModel.iniciarSesionConCredenciales("Admin", "123")
-                                onLoginExitoso()
+                                viewModel.setAccesoRapido("Admin", "123")
+                                if (viewModel.autenticar()) onLoginExitoso()
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp)
@@ -251,8 +230,8 @@ fun LoginScreen(
 
                         OutlinedButton(
                             onClick = {
-                                viewModel.iniciarSesionConCredenciales("GenCont", "123")
-                                onLoginExitoso()
+                                viewModel.setAccesoRapido("GenCont", "123")
+                                if (viewModel.autenticar()) onLoginExitoso()
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp)

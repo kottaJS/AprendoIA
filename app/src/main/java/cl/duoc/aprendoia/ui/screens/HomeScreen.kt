@@ -45,32 +45,32 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
+import cl.duoc.aprendoia.ui.components.animacionBalanceoInfinito
 import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
+import cl.duoc.aprendoia.ui.components.animacionReboteInfinito
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.AzulSecundario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.HomeViewModel
 
 @Composable
 fun HomeScreen(
-    viewModel: AprendoIAViewModel,
+    viewModel: HomeViewModel = viewModel(),
     onNavegarAMapa: () -> Unit,
     onNavegarAEscanerQR: () -> Unit,
     onNavegarAColeccion: () -> Unit,
     onNavegarAPuntoDetalle: (PuntoInteres) -> Unit
 ) {
     val usuario = viewModel.usuarioActual
-    val puntosDescubiertos = viewModel.puntosSantiago.count { it.completada }
-    val totalPuntos = viewModel.puntosSantiago.size
-    val videosVistos = viewModel.puntosSantiago.count { it.videoVisto }
-    val selfiesTomadas = viewModel.puntosSantiago.count { it.selfieTomada }
-
-    val progresoPorcentaje = if (totalPuntos > 0) (puntosDescubiertos.toFloat() / totalPuntos) else 0f
-    val desafioPunto = viewModel.puntosSantiago.firstOrNull { it.nombre.contains("Moneda", ignoreCase = true) }
-        ?: viewModel.puntosSantiago.firstOrNull { !it.completada }
-        ?: viewModel.puntosSantiago.firstOrNull()
+    val puntosDescubiertos = viewModel.puntosDescubiertos
+    val totalPuntos = viewModel.totalPuntos
+    val videosVistos = viewModel.videosVistos
+    val selfiesTomadas = viewModel.selfiesTomadas
+    val progresoPorcentaje = viewModel.progresoPorcentaje
+    val desafioPunto = viewModel.desafioPunto
 
     LazyColumn(
         modifier = Modifier
@@ -239,7 +239,9 @@ fun HomeScreen(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
                                 tint = AmarilloPuntos,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .animacionReboteInfinito(true)
                             )
                         }
 

@@ -41,30 +41,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.ColeccionViewModel
 
 @Composable
 fun ColeccionScreen(
-    viewModel: AprendoIAViewModel,
+    viewModel: ColeccionViewModel = viewModel(),
     onAbrirVideo: (PuntoInteres) -> Unit
 ) {
-    var filtroSeleccionado by remember { mutableStateOf("Todos") } // "Todos", "Videos", "Turísticos"
-
-    val puntosDescubiertos = viewModel.puntosSantiago.filter { it.completada }
-    val totalVideos = puntosDescubiertos.count { it.videoVisto }
-    val totalTuristicos = puntosDescubiertos.count { it.esHitoTuristico }
-
-    val listaAMostrar = remember(puntosDescubiertos, filtroSeleccionado) {
-        when (filtroSeleccionado) {
-            "Videos" -> puntosDescubiertos.filter { it.videoVisto }
-            "Turísticos" -> puntosDescubiertos.filter { it.esHitoTuristico }
-            else -> puntosDescubiertos
-        }
-    }
+    val filtroSeleccionado = viewModel.filtroSeleccionado
+    val puntosDescubiertos = viewModel.puntosDescubiertos
+    val totalVideos = viewModel.totalVideos
+    val totalTuristicos = viewModel.totalTuristicos
+    val listaAMostrar = viewModel.puntosFiltrados
 
     Column(
         modifier = Modifier
@@ -91,7 +84,7 @@ fun ColeccionScreen(
         ) {
             FilterChip(
                 selected = filtroSeleccionado == "Todos",
-                onClick = { filtroSeleccionado = "Todos" },
+                onClick = { viewModel.onFiltroChange("Todos") },
                 label = { Text("Todos (${puntosDescubiertos.size})") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AzulPrimario,
@@ -100,7 +93,7 @@ fun ColeccionScreen(
             )
             FilterChip(
                 selected = filtroSeleccionado == "Videos",
-                onClick = { filtroSeleccionado = "Videos" },
+                onClick = { viewModel.onFiltroChange("Videos") },
                 label = { Text("Videos ($totalVideos)") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AzulPrimario,
@@ -109,7 +102,7 @@ fun ColeccionScreen(
             )
             FilterChip(
                 selected = filtroSeleccionado == "Turísticos",
-                onClick = { filtroSeleccionado = "Turísticos" },
+                onClick = { viewModel.onFiltroChange("Turísticos") },
                 label = { Text("Turísticos ($totalTuristicos)") },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AzulPrimario,

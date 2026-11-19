@@ -43,15 +43,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.NotificacionItem
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
+import cl.duoc.aprendoia.viewmodel.NotificacionesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificacionesScreen(
-    notificaciones: List<NotificacionItem>,
+    viewModel: NotificacionesViewModel = viewModel(),
+    notificaciones: List<NotificacionItem> = viewModel.notificaciones,
     onVolver: () -> Unit,
     onSeleccionarNotificacion: (NotificacionItem) -> Unit
 ) {

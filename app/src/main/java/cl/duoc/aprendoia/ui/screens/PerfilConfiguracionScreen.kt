@@ -60,13 +60,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.PerfilViewModel
 
 @Composable
 fun PerfilConfiguracionScreen(
-    viewModel: AprendoIAViewModel,
+    viewModel: PerfilViewModel = viewModel(),
     onCerrarSesion: () -> Unit,
     onIrAFormularioAdmin: () -> Unit
 ) {
@@ -337,7 +338,7 @@ fun PerfilConfiguracionScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.actualizarPerfilActual(
+                        viewModel.actualizarPerfil(
                             nombre = editNombre,
                             email = editEmail,
                             telefono = editTelefono,
@@ -392,7 +393,7 @@ fun PerfilConfiguracionScreen(
                 Button(
                     onClick = {
                         usuario?.let {
-                            viewModel.actualizarPerfilActual(it.nombre, it.email, it.telefono, it.direccion, editAvatar)
+                            viewModel.actualizarPerfil(it.nombre, it.email, it.telefono, it.direccion, editAvatar)
                         }
                         mostrarDialogoAvatar = false
                     }

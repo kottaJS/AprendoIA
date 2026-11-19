@@ -20,10 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddLocation
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Face
@@ -72,7 +70,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
+import cl.duoc.aprendoia.ui.components.animacionBalanceoInfinito
+import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
 import cl.duoc.aprendoia.ui.components.animacionRotacionInfinita
+import cl.duoc.aprendoia.ui.screens.AnimacionesScreen
 import cl.duoc.aprendoia.ui.screens.BienvenidaScreen
 import cl.duoc.aprendoia.ui.screens.ColeccionScreen
 import cl.duoc.aprendoia.ui.screens.DetallePuntoScreen
@@ -114,8 +115,9 @@ enum class DestinoApp {
     HISTORIAL,               // 13. Historial de Actividades
     NOTIFICACIONES,          // 14. Notificaciones
     PERFIL_CONFIGURACION,    // 15. Perfil y Configuración
-    MISIONES_LISTA,          // Lista de misiones
-    FORMULARIO_ADMIN         // Formulario nuevo punto (Admin)
+    MISIONES_LISTA,          // 16. Lista de misiones
+    FORMULARIO_ADMIN,        // 17. Formulario nuevo punto (Admin)
+    ANIMACIONES              // 18. Laboratorio de Animaciones (Ejemplo 106 de Clases)
 }
 
 class MainActivity : ComponentActivity() {
@@ -159,7 +161,6 @@ fun EnrutadorPrincipal(viewModel: AprendoIAViewModel) {
         }
         DestinoApp.LOGIN -> {
             LoginScreen(
-                viewModel = viewModel,
                 onLoginExitoso = { destinoActual = DestinoApp.DASHBOARD },
                 onIrARegistro = { destinoActual = DestinoApp.REGISTRO_JUGADOR }
             )
@@ -167,14 +168,11 @@ fun EnrutadorPrincipal(viewModel: AprendoIAViewModel) {
         DestinoApp.REGISTRO_JUGADOR -> {
             RegistroJugadorScreen(
                 onRegistroExitoso = { destinoActual = DestinoApp.DASHBOARD },
-                onVolver = { destinoActual = DestinoApp.LOGIN },
-                onCrearJugador = { nom, mail, tel, pass, dir, av ->
-                    viewModel.registrarNuevoJugador(nom, mail, tel, pass, dir, av)
-                }
+                onVolver = { destinoActual = DestinoApp.LOGIN }
             )
         }
         else -> {
-            // Contenedor principal con Navegación para las pantallas 4 a 15
+            // Contenedor principal con Navegación para las pantallas 4 a 18
             ContenedorConNavegacion(
                 viewModel = viewModel,
                 destinoActual = destinoActual,
@@ -351,6 +349,20 @@ fun ContenedorConNavegacion(
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Item de Animaciones
+                NavigationDrawerItem(
+                    label = { Text("Animaciones") },
+                    icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AzulPrimario) },
+                    selected = destinoActual == DestinoApp.ANIMACIONES,
+                    onClick = {
+                        onCambiarDestino(DestinoApp.ANIMACIONES)
+                        coroutineScope.launch { drawerState.close() }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
                 if (usuario?.rol == "Admin") {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     NavigationDrawerItem(
@@ -402,6 +414,7 @@ fun ContenedorConNavegacion(
                                 DestinoApp.PERFIL_CONFIGURACION -> "Mi Perfil"
                                 DestinoApp.MISIONES_LISTA -> "Misiones en Santiago"
                                 DestinoApp.FORMULARIO_ADMIN -> "Nuevo Punto en Terreno"
+                                DestinoApp.ANIMACIONES -> "Animaciones"
                                 else -> "Aprendo IA"
                             },
                             style = MaterialTheme.typography.titleMedium,
@@ -415,7 +428,7 @@ fun ContenedorConNavegacion(
                         }
                     },
                     actions = {
-                        // Badge de Notificaciones
+                        // Badge de Notificaciones con animación de BALANCEO (SWING)
                         IconButton(onClick = { onCambiarDestino(DestinoApp.NOTIFICACIONES) }) {
                             BadgedBox(
                                 badge = {
@@ -424,15 +437,21 @@ fun ContenedorConNavegacion(
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Notificaciones", tint = Color.White)
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Notificaciones",
+                                    tint = Color.White,
+                                    modifier = Modifier.animacionBalanceoInfinito(true)
+                                )
                             }
                         }
 
-                        // Badge de Puntos
+                        // Badge de Puntos con animación de LATIDO (PULSE)
                         Surface(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(AmarilloPuntos)
+                                .animacionLatidoInfinito(true)
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             color = Color.Transparent,
                             onClick = { onCambiarDestino(DestinoApp.PUNTAJE_PROGRESO) }
@@ -454,7 +473,7 @@ fun ContenedorConNavegacion(
                             }
                         }
 
-                        // Botón de sincronización
+                        // Botón de sincronización con animación de GIRO (SPIN)
                         IconButton(
                             onClick = {
                                 coroutineScope.launch {
@@ -519,7 +538,6 @@ fun ContenedorConNavegacion(
             ) {
                 when (destinoActual) {
                     DestinoApp.DASHBOARD -> HomeScreen(
-                        viewModel = viewModel,
                         onNavegarAMapa = { onCambiarDestino(DestinoApp.MAPA) },
                         onNavegarAEscanerQR = { onCambiarDestino(DestinoApp.ESCANER_QR) },
                         onNavegarAColeccion = { onCambiarDestino(DestinoApp.COLECCION) },
@@ -530,7 +548,6 @@ fun ContenedorConNavegacion(
                     )
 
                     DestinoApp.MAPA -> MapaScreen(
-                        viewModel = viewModel,
                         onVerDetallePunto = { p ->
                             viewModel.puntoSeleccionado = p
                             onCambiarDestino(DestinoApp.DETALLE_PUNTO)
@@ -554,7 +571,6 @@ fun ContenedorConNavegacion(
                     }
 
                     DestinoApp.ESCANER_QR -> EscaneoQRScreen(
-                        viewModel = viewModel,
                         onEscaneoExitoso = { onCambiarDestino(DestinoApp.RESULTADO_QR) },
                         onVolver = { onCambiarDestino(DestinoApp.DASHBOARD) }
                     )
@@ -585,7 +601,6 @@ fun ContenedorConNavegacion(
                     )
 
                     DestinoApp.COLECCION -> ColeccionScreen(
-                        viewModel = viewModel,
                         onAbrirVideo = { p ->
                             viewModel.puntoSeleccionado = p
                             onCambiarDestino(DestinoApp.VIDEO_EDUCATIVO)
@@ -593,13 +608,10 @@ fun ContenedorConNavegacion(
                     )
 
                     DestinoApp.PUNTAJE_PROGRESO -> PuntajeProgresoScreen(
-                        viewModel = viewModel,
                         onVolver = { onCambiarDestino(DestinoApp.DASHBOARD) }
                     )
 
-                    DestinoApp.HISTORIAL -> HistorialScreen(
-                        viewModel = viewModel
-                    )
+                    DestinoApp.HISTORIAL -> HistorialScreen()
 
                     DestinoApp.NOTIFICACIONES -> NotificacionesScreen(
                         notificaciones = viewModel.notificaciones,
@@ -620,19 +632,17 @@ fun ContenedorConNavegacion(
                     )
 
                     DestinoApp.PERFIL_CONFIGURACION -> PerfilConfiguracionScreen(
-                        viewModel = viewModel,
                         onCerrarSesion = onCerrarSesion,
                         onIrAFormularioAdmin = { onCambiarDestino(DestinoApp.FORMULARIO_ADMIN) }
                     )
 
-                    DestinoApp.MISIONES_LISTA -> MisionesScreen(
-                        viewModel = viewModel
-                    )
+                    DestinoApp.MISIONES_LISTA -> MisionesScreen()
 
                     DestinoApp.FORMULARIO_ADMIN -> FormularioScreen(
-                        viewModel = viewModel,
                         onRegistroCompletado = { onCambiarDestino(DestinoApp.MAPA) }
                     )
+
+                    DestinoApp.ANIMACIONES -> AnimacionesScreen()
 
                     else -> Unit
                 }

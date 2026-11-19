@@ -38,21 +38,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.model.VideoIA
 import cl.duoc.aprendoia.ui.components.animacionReboteInfinito
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
+import cl.duoc.aprendoia.viewmodel.ResultadoQRViewModel
 
 @Composable
 fun ResultadoQRScreen(
-    punto: PuntoInteres?,
-    video: VideoIA?,
+    punto: PuntoInteres? = null,
+    video: VideoIA? = null,
+    viewModel: ResultadoQRViewModel = viewModel(),
     onVerVideo: () -> Unit,
     onTomarSelfie: () -> Unit,
     onVolverAlMapa: () -> Unit
 ) {
+    val puntoActivo = punto ?: viewModel.puntoSeleccionado
+    val videoActivo = video ?: viewModel.videoQREscaneado
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,7 +72,7 @@ fun ResultadoQRScreen(
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Trofeo animado con rebote (del ejemplo de animaciones del profe)
+            // Trofeo animado con rebote
             Box(
                 modifier = Modifier
                     .size(90.dp)
@@ -132,12 +137,12 @@ fun ResultadoQRScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = video?.titulo?.ifBlank { punto?.videoTitulo ?: "Cápsula de IA" } ?: "Cápsula de IA",
+                            text = videoActivo?.titulo?.ifBlank { puntoActivo?.videoTitulo ?: "Cápsula de IA" } ?: "Cápsula de IA",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "${punto?.nombre ?: "Santiago"} • Video educativo",
+                            text = "${puntoActivo?.nombre ?: "Santiago"} • Video educativo",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

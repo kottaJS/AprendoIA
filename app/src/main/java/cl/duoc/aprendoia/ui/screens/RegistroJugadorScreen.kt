@@ -42,10 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,7 +52,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
+import cl.duoc.aprendoia.viewmodel.RegistroJugadorViewModel
 
 val AVATARES_DISPONIBLES = listOf(
     "avatar_1" to Color(0xFFE91E63),
@@ -70,24 +68,10 @@ val AVATARES_DISPONIBLES = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistroJugadorScreen(
+    viewModel: RegistroJugadorViewModel = viewModel(),
     onRegistroExitoso: () -> Unit,
-    onVolver: () -> Unit,
-    onCrearJugador: (nombre: String, email: String, tel: String, pass: String, dir: String, avatar: String) -> Boolean
+    onVolver: () -> Unit
 ) {
-    var nombre by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var telefono by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var direccion by remember { mutableStateOf("") }
-    var avatarSeleccionado by remember { mutableStateOf("avatar_1") }
-
-    var passwordVisible by remember { mutableStateOf(false) }
-
-    var errorNombre by remember { mutableStateOf<String?>(null) }
-    var errorEmail by remember { mutableStateOf<String?>(null) }
-    var errorPassword by remember { mutableStateOf<String?>(null) }
-    var errorGeneral by remember { mutableStateOf<String?>(null) }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -120,16 +104,13 @@ fun RegistroJugadorScreen(
 
             // Campo Nombre
             OutlinedTextField(
-                value = nombre,
-                onValueChange = {
-                    nombre = it
-                    errorNombre = null
-                },
+                value = viewModel.nombre,
+                onValueChange = { viewModel.onNombreChange(it) },
                 label = { Text("Nombre completo") },
                 placeholder = { Text("Ej: Ana González") },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                isError = errorNombre != null,
-                supportingText = errorNombre?.let { { Text(it) } },
+                isError = viewModel.errorNombre != null,
+                supportingText = viewModel.errorNombre?.let { { Text(it) } },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -139,17 +120,14 @@ fun RegistroJugadorScreen(
 
             // Campo Correo
             OutlinedTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                    errorEmail = null
-                },
+                value = viewModel.email,
+                onValueChange = { viewModel.onEmailChange(it) },
                 label = { Text("Correo electrónico") },
                 placeholder = { Text("ana@email.com") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                isError = errorEmail != null,
-                supportingText = errorEmail?.let { { Text(it) } },
+                isError = viewModel.errorEmail != null,
+                supportingText = viewModel.errorEmail?.let { { Text(it) } },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -159,8 +137,8 @@ fun RegistroJugadorScreen(
 
             // Campo Teléfono
             OutlinedTextField(
-                value = telefono,
-                onValueChange = { telefono = it },
+                value = viewModel.telefono,
+                onValueChange = { viewModel.onTelefonoChange(it) },
                 label = { Text("Teléfono") },
                 placeholder = { Text("+56 9 1234 5678") },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
@@ -174,26 +152,23 @@ fun RegistroJugadorScreen(
 
             // Campo Contraseña
             OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    errorPassword = null
-                },
+                value = viewModel.password,
+                onValueChange = { viewModel.onPasswordChange(it) },
                 label = { Text("Contraseña") },
                 placeholder = { Text("Mínimo 3 caracteres") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(onClick = { viewModel.togglePasswordVisibility() }) {
                         Icon(
-                            if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            if (viewModel.passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                visualTransformation = if (viewModel.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                isError = errorPassword != null,
-                supportingText = errorPassword?.let { { Text(it) } },
+                isError = viewModel.errorPassword != null,
+                supportingText = viewModel.errorPassword?.let { { Text(it) } },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -203,8 +178,8 @@ fun RegistroJugadorScreen(
 
             // Campo Dirección
             OutlinedTextField(
-                value = direccion,
-                onValueChange = { direccion = it },
+                value = viewModel.direccion,
+                onValueChange = { viewModel.onDireccionChange(it) },
                 label = { Text("Dirección (opcional)") },
                 placeholder = { Text("Santiago Centro, Providencia...") },
                 leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
@@ -229,7 +204,7 @@ fun RegistroJugadorScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(AVATARES_DISPONIBLES) { (id, color) ->
-                    val seleccionado = avatarSeleccionado == id
+                    val seleccionado = viewModel.avatarSeleccionado == id
                     Box(
                         modifier = Modifier
                             .size(54.dp)
@@ -240,7 +215,7 @@ fun RegistroJugadorScreen(
                                 color = if (seleccionado) MaterialTheme.colorScheme.primary else Color.Transparent,
                                 shape = CircleShape
                             )
-                            .clickable { avatarSeleccionado = id },
+                            .clickable { viewModel.onAvatarChange(id) },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -253,10 +228,10 @@ fun RegistroJugadorScreen(
                 }
             }
 
-            if (errorGeneral != null) {
+            if (viewModel.errorGeneral != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = errorGeneral ?: "",
+                    text = viewModel.errorGeneral ?: "",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -266,27 +241,8 @@ fun RegistroJugadorScreen(
 
             Button(
                 onClick = {
-                    var valido = true
-                    if (nombre.isBlank()) {
-                        errorNombre = "El nombre es obligatorio"
-                        valido = false
-                    }
-                    if (email.isBlank() || !email.contains("@")) {
-                        errorEmail = "Ingresa un correo electrónico válido"
-                        valido = false
-                    }
-                    if (password.length < 3) {
-                        errorPassword = "La contraseña debe tener al menos 3 caracteres"
-                        valido = false
-                    }
-
-                    if (valido) {
-                        val exito = onCrearJugador(nombre, email, telefono, password, direccion, avatarSeleccionado)
-                        if (exito) {
-                            onRegistroExitoso()
-                        } else {
-                            errorGeneral = "No se pudo registrar el jugador (quizás el correo ya existe)"
-                        }
+                    if (viewModel.registrar()) {
+                        onRegistroExitoso()
                     }
                 },
                 modifier = Modifier
@@ -302,4 +258,3 @@ fun RegistroJugadorScreen(
         }
     }
 }
-

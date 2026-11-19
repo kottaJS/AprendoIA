@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <cache-path
-        name="fotos_temporales"
-        path="fotos/" />
+    <cache-path name="fotos_temporales" path="fotos/" />
+    <cache-path name="cache_raiz" path="." />
+    <external-cache-path name="external_cache" path="." />
+    <files-path name="files_raiz" path="." />
+    <external-files-path name="external_files" path="." />
 </paths>
 

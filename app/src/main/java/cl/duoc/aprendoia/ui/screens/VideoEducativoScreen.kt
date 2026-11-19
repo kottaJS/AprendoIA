@@ -55,25 +55,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
+import cl.duoc.aprendoia.viewmodel.VideoEducativoViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoEducativoScreen(
-    punto: PuntoInteres?,
+    punto: PuntoInteres? = null,
+    viewModel: VideoEducativoViewModel = viewModel(),
     onVolver: () -> Unit,
-    onMarcarVisto: (Int) -> Unit
+    onMarcarVisto: (Int) -> Unit = { id -> viewModel.marcarVideoVisto(id) }
 ) {
     val context = LocalContext.current
-    val tituloVideo = punto?.videoTitulo?.ifBlank { punto.nombre } ?: "Introducción a la Inteligencia Artificial"
-    val temaVideo = punto?.videoTema?.ifBlank { punto?.categoriaIA ?: "Fundamentos de IA" } ?: "Fundamentos de IA"
-    val urlVideo = punto?.urlVideo ?: "https://www.youtube.com/shorts/sample1"
+    val puntoActivo = punto ?: viewModel.puntoSeleccionado
+    val tituloVideo = puntoActivo?.videoTitulo?.ifBlank { puntoActivo.nombre } ?: "Introducción a la Inteligencia Artificial"
+    val temaVideo = puntoActivo?.videoTema?.ifBlank { puntoActivo?.categoriaIA ?: "Fundamentos de IA" } ?: "Fundamentos de IA"
+    val urlVideo = puntoActivo?.urlVideo ?: "https://www.youtube.com/shorts/sample1"
 
     var reproduciendo by remember { mutableStateOf(false) }
     var progresoVideo by remember { mutableFloatStateOf(0.45f) }
-    var videoYaVisto by remember { mutableStateOf(punto?.videoVisto == true) }
+    var videoYaVisto by remember { mutableStateOf(puntoActivo?.videoVisto == true) }
 
     Scaffold(
         topBar = {
@@ -224,9 +228,9 @@ fun VideoEducativoScreen(
             // Botón de confirmación de visualización (Requisito PDF)
             Button(
                 onClick = {
-                    if (punto != null) {
+                    if (puntoActivo != null) {
                         videoYaVisto = true
-                        onMarcarVisto(punto.id)
+                        onMarcarVisto(puntoActivo.id)
                     }
                 },
                 modifier = Modifier

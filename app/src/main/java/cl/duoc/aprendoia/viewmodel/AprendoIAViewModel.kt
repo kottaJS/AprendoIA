@@ -3,96 +3,57 @@ package cl.duoc.aprendoia.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
-import cl.duoc.aprendoia.data.AprendoIADbHelper
-import cl.duoc.aprendoia.model.CapsulaIA
+import cl.duoc.aprendoia.data.AprendoIARepository
 import cl.duoc.aprendoia.model.HistorialItem
 import cl.duoc.aprendoia.model.NotificacionItem
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.model.Usuario
 import cl.duoc.aprendoia.model.VideoIA
-import org.json.JSONObject
 import java.util.Locale
 
 class AprendoIAViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dbHelper = AprendoIADbHelper(application.applicationContext)
+    private val repository = AprendoIARepository.getInstance(application)
 
-    // Lista de todos los usuarios registrados
-    val usuarios = mutableStateListOf<Usuario>()
+    val usuarios: List<Usuario>
+        get() = repository.usuarios
 
-    // Usuario activo actual
-    var usuarioActual by mutableStateOf<Usuario?>(null)
-        private set
+    val usuarioActual: Usuario?
+        get() = repository.usuarioActual
 
-    var estaAutenticado by mutableStateOf(false)
+    val estaAutenticado: Boolean
+        get() = repository.estaAutenticado
 
-    // Puntos de interés para el usuario activo
-    val puntosSantiago = mutableStateListOf<PuntoInteres>()
+    val puntosSantiago: List<PuntoInteres>
+        get() = repository.puntosSantiago
 
-    // Historial y Notificaciones
-    val historial = mutableStateListOf<HistorialItem>()
-    val notificaciones = mutableStateListOf<NotificacionItem>()
+    val historial: List<HistorialItem>
+        get() = repository.historial
 
-    // Punto actualmente seleccionado (para Detalle, Resultado QR, Selfie, Video)
-    var puntoSeleccionado by mutableStateOf<PuntoInteres?>(null)
+    val notificaciones: List<NotificacionItem>
+        get() = repository.notificaciones
 
-    // Estado del Escaneo QR
-    var videoQREscaneado by mutableStateOf<VideoIA?>(null)
-    var mensajeErrorQR by mutableStateOf<String?>(null)
-    var mensajeExitoQR by mutableStateOf<String?>(null)
+    var puntoSeleccionado: PuntoInteres?
+        get() = repository.puntoSeleccionado
+        set(value) { repository.seleccionarPunto(value) }
 
-    // Estado de filtros del mapa y colección
-    var filtroMapa by mutableStateOf("Todos") // "Todos", "Pendientes", "Completados"
-    var filtroColeccion by mutableStateOf("Todos") // "Todos", "Videos", "Turísticos"
+    val videoQREscaneado: VideoIA?
+        get() = repository.videoQREscaneado
 
-    // Errores de Login (Compatibilidad)
-    var loginEmailError by mutableStateOf<String?>(null)
-    var loginPasswordError by mutableStateOf<String?>(null)
+    val mensajeErrorQR: String?
+        get() = repository.mensajeErrorQR
 
-    fun validarLogin(email: String, clave: String): Boolean {
-        loginEmailError = null
-        loginPasswordError = null
-        var valido = true
-        if (email.isBlank() || !email.contains("@")) {
-            loginEmailError = "Ingresa un correo electrónico válido"
-            valido = false
-        }
-        if (clave.length < 3) {
-            loginPasswordError = "La contraseña debe tener al menos 3 caracteres"
-            valido = false
-        }
-        if (valido) {
-            val u = usuarios.firstOrNull { it.email.equals(email.trim(), ignoreCase = true) }
-            if (u != null) {
-                iniciarSesionUsuario(u)
-            } else {
-                registrarNuevoJugador(
-                    nombre = email.substringBefore("@").replaceFirstChar { it.uppercase() },
-                    email = email.trim(),
-                    telefono = "+56 9 1234 5678",
-                    clave = clave.trim(),
-                    direccion = "Santiago",
-                    avatar = "avatar_1"
-                )
-            }
-        }
-        return valido
-    }
+    val mensajeExitoQR: String?
+        get() = repository.mensajeExitoQR
 
-    fun registrarSelfie(puntoId: Int, bitmap: Bitmap) {
-        val uId = usuarioActual?.id ?: return
-        dbHelper.registrarDescubrimiento(uId, puntoId, puntosGanados = 10, selfieTomada = true, selfieUri = null)
-        usuarioActual = dbHelper.obtenerUsuarioPorId(uId)
-        recargarPuntos()
-        recargarHistorial()
-        recargarUsuarios()
-    }
+    var sincronizando: Boolean
+        get() = repository.sincronizando
+        set(value) { repository.sincronizando = value }
 
-    // Formulario de nuevo punto (Admin)
+    // Campos del formulario Admin de nuevo punto
     var formNombre by mutableStateOf("")
     var formComuna by mutableStateOf("Santiago Centro")
     var formCategoria by mutableStateOf("Visión Artificial")
@@ -106,112 +67,41 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
     var formErrorCoordenadas by mutableStateOf<String?>(null)
     var formErrorGeneral by mutableStateOf<String?>(null)
     var formExitoMensaje by mutableStateOf<String?>(null)
-    var sincronizando by mutableStateOf(false)
 
     fun sincronizarDatos() {
-        sincronizando = true
-        recargarPuntos()
-        recargarUsuarios()
-        recargarHistorial()
-        recargarNotificaciones()
+        repository.sincronizarDatos()
     }
 
     fun finalizarSincronizacion() {
-        sincronizando = false
-    }
-
-    init {
-        recargarUsuarios()
-        recargarNotificaciones()
-        // Inicializar con el primer usuario tipo Cliente si existe
-        val primerCliente = usuarios.firstOrNull { it.rol == "Cliente" } ?: usuarios.firstOrNull()
-        if (primerCliente != null) {
-            iniciarSesionUsuario(primerCliente)
-        }
+        repository.finalizarSincronizacion()
     }
 
     fun recargarUsuarios() {
-        usuarios.clear()
-        usuarios.addAll(dbHelper.obtenerTodosLosUsuarios())
+        repository.recargarUsuarios()
     }
 
     fun recargarPuntos() {
-        puntosSantiago.clear()
-        val lista = dbHelper.obtenerTodosLosPuntos(usuarioActual?.id)
-        puntosSantiago.addAll(lista)
-        // Actualizar puntoSeleccionado si está activo o inicializar con La Moneda
-        puntoSeleccionado = if (puntoSeleccionado != null) {
-            lista.firstOrNull { it.id == puntoSeleccionado?.id }
-        } else {
-            lista.firstOrNull { it.nombre.contains("Moneda", ignoreCase = true) } ?: lista.firstOrNull()
-        }
+        repository.recargarPuntos()
     }
 
     fun recargarHistorial() {
-        historial.clear()
-        usuarioActual?.id?.let { uId ->
-            historial.addAll(dbHelper.obtenerHistorialPorUsuario(uId))
-        }
+        repository.recargarHistorial()
     }
 
     fun recargarNotificaciones() {
-        notificaciones.clear()
-        notificaciones.addAll(dbHelper.obtenerTodasLasNotificaciones())
+        repository.recargarNotificaciones()
     }
 
-    // =========================================================================
-    // GESTIÓN DE SESIÓN Y USUARIOS
-    // =========================================================================
     fun iniciarSesionConCredenciales(emailOrAlias: String, clave: String): Boolean {
-        val entrada = emailOrAlias.trim()
-        val user = usuarios.firstOrNull {
-            it.email.equals(entrada, ignoreCase = true) ||
-            it.alias.equals(entrada, ignoreCase = true) ||
-            (entrada.equals("Admin", ignoreCase = true) && it.rol == "Admin") ||
-            (entrada.equals("GenCont", ignoreCase = true) && it.rol == "GenCont")
-        }
-
-        if (user != null) {
-            if (user.password == clave.trim() || clave.trim() == "123") {
-                iniciarSesionUsuario(user)
-                return true
-            }
-            return false
-        } else {
-            // Usuario nuevo
-            return registrarNuevoJugador(
-                nombre = if (entrada.contains("@")) entrada.substringBefore("@") else entrada,
-                email = if (entrada.contains("@")) entrada else "$entrada@duocuc.cl",
-                telefono = "+56 9 1234 5678",
-                clave = clave.trim(),
-                direccion = "Santiago",
-                avatar = "avatar_1"
-            )
-        }
-    }
-
-    fun validarYAutenticar(usuario: Usuario, claveIngresada: String): Boolean {
-        if (usuario.password == claveIngresada.trim()) {
-            iniciarSesionUsuario(usuario)
-            return true
-        }
-        return false
+        return repository.iniciarSesion(emailOrAlias, clave)
     }
 
     fun iniciarSesionUsuario(usuario: Usuario) {
-        usuarioActual = usuario
-        estaAutenticado = true
-        recargarPuntos()
-        recargarHistorial()
+        repository.iniciarSesionDirecto(usuario)
     }
 
     fun cerrarSesion() {
-        usuarioActual = null
-        estaAutenticado = false
-        puntosSantiago.clear()
-        historial.clear()
-        puntoSeleccionado = null
-        videoQREscaneado = null
+        repository.cerrarSesion()
     }
 
     fun registrarNuevoJugador(
@@ -222,30 +112,7 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         direccion: String,
         avatar: String
     ): Boolean {
-        if (nombre.isBlank() || email.isBlank() || clave.isBlank()) return false
-
-        val nuevo = Usuario(
-            email = email.trim(),
-            nombre = nombre.trim(),
-            alias = nombre.trim().substringBefore(" "),
-            password = clave.trim(),
-            telefono = telefono.trim().ifBlank { "+56 9 1234 5678" },
-            direccion = direccion.trim().ifBlank { "Santiago Centro" },
-            avatar = avatar,
-            rol = "Cliente",
-            puntaje = 0,
-            qrEncontrados = 0
-        )
-        val id = dbHelper.insertarUsuario(nuevo)
-        if (id > 0) {
-            recargarUsuarios()
-            val registrado = dbHelper.obtenerUsuarioPorId(id.toInt())
-            if (registrado != null) {
-                iniciarSesionUsuario(registrado)
-                return true
-            }
-        }
-        return false
+        return repository.registrarNuevoJugador(nombre, email, telefono, clave, direccion, avatar)
     }
 
     fun actualizarPerfilActual(
@@ -255,147 +122,37 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
         direccion: String,
         avatar: String
     ): Boolean {
-        val actual = usuarioActual ?: return false
-        val modificado = actual.copy(
-            nombre = nombre.trim(),
-            email = email.trim(),
-            telefono = telefono.trim(),
-            direccion = direccion.trim(),
-            avatar = avatar
-        )
-        val rows = dbHelper.actualizarUsuario(modificado)
-        if (rows > 0) {
-            usuarioActual = modificado
-            recargarUsuarios()
-            return true
-        }
-        return false
+        return repository.actualizarPerfil(nombre, email, telefono, direccion, avatar)
     }
 
     fun eliminarJugadorAdmin(usuarioId: Int): Boolean {
-        if (usuarioActual?.rol != "Admin") return false
-        val rows = dbHelper.eliminarUsuario(usuarioId)
-        if (rows > 0) {
-            recargarUsuarios()
-            return true
-        }
-        return false
+        return repository.eliminarJugador(usuarioId)
     }
 
-    // =========================================================================
-    // PROCESAMIENTO QR Y RECOMPENSAS
-    // =========================================================================
     fun procesarContenidoQR(rawText: String, puntoIdSugerido: Int? = null): Boolean {
-        mensajeErrorQR = null
-        mensajeExitoQR = null
+        return repository.procesarContenidoQR(rawText, puntoIdSugerido)
+    }
 
-        val uId = usuarioActual?.id ?: return false
-
-        return try {
-            val json = JSONObject(rawText.trim())
-            val titulo = json.optString("titulo").ifBlank {
-                json.optString("lugar").ifBlank {
-                    json.optString("nombre", "")
-                }
-            }
-            val descripcion = json.optString("descripcion").ifBlank {
-                "Cápsula educativa de Inteligencia Artificial en Santiago."
-            }
-            val url = json.optString("url").ifBlank {
-                "https://www.youtube.com/shorts/sample1"
-            }
-
-            // Identificar qué punto de Santiago coincide con este QR
-            val puntoEncontrado = puntosSantiago.firstOrNull {
-                it.codigoQR.equals(rawText.trim(), ignoreCase = true) ||
-                it.nombre.contains(titulo, ignoreCase = true) ||
-                (puntoIdSugerido != null && it.id == puntoIdSugerido)
-            } ?: puntosSantiago.firstOrNull()
-
-            if (puntoEncontrado != null) {
-                puntoSeleccionado = puntoEncontrado
-                videoQREscaneado = VideoIA(
-                    titulo = puntoEncontrado.videoTitulo.ifBlank { titulo },
-                    descripcion = puntoEncontrado.descripcion.ifBlank { descripcion },
-                    url = puntoEncontrado.urlVideo.ifBlank { url }
-                )
-
-                // Verificar si ya fue descubierto por este jugador
-                val yaDescubierto = dbHelper.esPuntoDescubiertoPorUsuario(uId, puntoEncontrado.id)
-                if (yaDescubierto) {
-                    mensajeExitoQR = "¡Ya habías descubierto este punto! Puedes volver a ver el video."
-                } else {
-                    // Otorgar 10 puntos estándar
-                    dbHelper.registrarDescubrimiento(uId, puntoEncontrado.id, puntosGanados = 10)
-                    usuarioActual = dbHelper.obtenerUsuarioPorId(uId)
-                    recargarPuntos()
-                    recargarHistorial()
-                    recargarUsuarios()
-                    mensajeExitoQR = "¡QR encontrado con éxito! (+10 puntos)"
-                }
-                true
-            } else {
-                mensajeErrorQR = "Código QR no reconocido en la red de Santiago"
-                false
-            }
-        } catch (e: Exception) {
-            // Si el QR no es JSON, verificar si coincide con el código directo de algún punto
-            val puntoPorCodigo = puntosSantiago.firstOrNull { it.codigoQR.equals(rawText.trim(), ignoreCase = true) }
-            if (puntoPorCodigo != null) {
-                puntoSeleccionado = puntoPorCodigo
-                videoQREscaneado = VideoIA(puntoPorCodigo.videoTitulo, puntoPorCodigo.descripcion, puntoPorCodigo.urlVideo)
-                val yaDescubierto = dbHelper.esPuntoDescubiertoPorUsuario(uId, puntoPorCodigo.id)
-                if (!yaDescubierto) {
-                    dbHelper.registrarDescubrimiento(uId, puntoPorCodigo.id, puntosGanados = 10)
-                    usuarioActual = dbHelper.obtenerUsuarioPorId(uId)
-                    recargarPuntos()
-                    recargarHistorial()
-                    recargarUsuarios()
-                }
-                mensajeExitoQR = "¡QR encontrado con éxito! (+10 puntos)"
-                true
-            } else {
-                mensajeErrorQR = "El código QR leído no contiene un formato válido"
-                false
-            }
-        }
+    fun registrarSelfie(puntoId: Int, bitmap: Bitmap? = null) {
+        repository.registrarSelfie(puntoId, null)
     }
 
     fun registrarSelfieTuristica(puntoId: Int, uriFoto: String?): Boolean {
-        val uId = usuarioActual?.id ?: return false
-        val exito = dbHelper.registrarDescubrimiento(uId, puntoId, puntosGanados = 10, selfieTomada = true, selfieUri = uriFoto)
-        if (exito) {
-            usuarioActual = dbHelper.obtenerUsuarioPorId(uId)
-            recargarPuntos()
-            recargarHistorial()
-            recargarUsuarios()
-        }
-        return exito
+        return repository.registrarSelfie(puntoId, uriFoto)
     }
 
     fun marcarVideoVisto(puntoId: Int): Boolean {
-        val uId = usuarioActual?.id ?: return false
-        val exito = dbHelper.marcarVideoVisto(uId, puntoId)
-        if (exito) {
-            recargarPuntos()
-            recargarHistorial()
-        }
-        return exito
+        return repository.marcarVideoVisto(puntoId)
     }
 
     fun limpiarEstadoQR() {
-        videoQREscaneado = null
-        mensajeErrorQR = null
-        mensajeExitoQR = null
+        repository.limpiarEstadoQR()
     }
 
     fun obtenerJsonEjemplo(punto: PuntoInteres): String {
         return """{"titulo":"${punto.nombre}","descripcion":"${punto.descripcion}","url":"${punto.urlVideo}"}"""
     }
 
-    // =========================================================================
-    // CREACIÓN DE PUNTOS EN TERRENO (ADMIN)
-    // =========================================================================
     fun actualizarCoordenadasGps(lat: Double, lon: Double) {
         formLatitud = String.format(Locale.US, "%.5f", lat)
         formLongitud = String.format(Locale.US, "%.5f", lon)
@@ -425,7 +182,7 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
             return false
         }
 
-        val nuevoId = (puntosSantiago.maxOfOrNull { it.id } ?: 0) + 1
+        val nuevoId = (repository.puntosSantiago.maxOfOrNull { it.id } ?: 0) + 1
         val nuevoPunto = PuntoInteres(
             id = nuevoId,
             nombre = formNombre.trim(),
@@ -443,9 +200,8 @@ class AprendoIAViewModel(application: Application) : AndroidViewModel(applicatio
             esHitoTuristico = true
         )
 
-        val insertado = dbHelper.insertarPunto(nuevoPunto)
+        val insertado = repository.guardarPuntoTerreno(nuevoPunto)
         if (insertado) {
-            recargarPuntos()
             formNombre = ""
             formDescripcion = ""
             formVideoTitulo = ""

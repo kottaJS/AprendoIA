@@ -38,16 +38,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.ui.components.animacionDestelloOpacidad
 import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.MoradoIA
 import cl.duoc.aprendoia.ui.theme.VerdeExito
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.FormularioAdminViewModel
 
 @Composable
 fun FormularioScreen(
-    viewModel: AprendoIAViewModel,
+    viewModel: FormularioAdminViewModel = viewModel(),
     onRegistroCompletado: () -> Unit
 ) {
     val scrollState = rememberScrollState()

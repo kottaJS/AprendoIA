@@ -1,5 +1,7 @@
 package cl.duoc.aprendoia.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -55,23 +57,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.PuntoInteres
+import cl.duoc.aprendoia.ui.components.animacionLatidoInfinito
 import cl.duoc.aprendoia.ui.theme.AmarilloPuntos
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
 import cl.duoc.aprendoia.util.crearArchivoSelfieTemporal
 import cl.duoc.aprendoia.util.guardarSelfieEnGaleria
 import cl.duoc.aprendoia.util.uriCompartible
+import cl.duoc.aprendoia.viewmodel.SelfieTuristicaViewModel
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelfieTuristicaScreen(
-    punto: PuntoInteres?,
+    punto: PuntoInteres? = null,
+    viewModel: SelfieTuristicaViewModel = viewModel(),
     onSelfieRegistrada: (Uri?) -> Unit,
     onVolver: () -> Unit
 ) {
     val context = LocalContext.current
+    val puntoActivo = punto ?: viewModel.puntoSeleccionado
     var fotoArchivo by remember { mutableStateOf<File?>(null) }
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
     var fotoTomadaConExito by remember { mutableStateOf(false) }
@@ -80,11 +88,40 @@ fun SelfieTuristicaScreen(
     val tomarFotoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { guardo ->
-        if (guardo && fotoArchivo != null) {
-            val uriGaleria = context.guardarSelfieEnGaleria(fotoArchivo!!)
-            fotoUri = uriGaleria ?: Uri.fromFile(fotoArchivo)
-            fotoTomadaConExito = true
-            Toast.makeText(context, "¡Foto guardada en galería!", Toast.LENGTH_SHORT).show()
+        if (guardo && fotoArchivo != null && fotoArchivo!!.exists() && fotoArchivo!!.length() > 0L) {
+            try {
+                val uriGaleria = context.guardarSelfieEnGaleria(fotoArchivo!!)
+                fotoUri = uriGaleria ?: context.uriCompartible(fotoArchivo!!)
+                fotoTomadaConExito = true
+                Toast.makeText(context, "¡Foto guardada en galería!", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                fotoTomadaConExito = true
+                fotoUri = try { context.uriCompartible(fotoArchivo!!) } catch (ex: Exception) { null }
+            }
+        } else {
+            Toast.makeText(context, "No se capturó ninguna foto", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun ejecutarDisparoCamara() {
+        try {
+            val archivo = context.crearArchivoSelfieTemporal()
+            fotoArchivo = archivo
+            val uri = context.uriCompartible(archivo)
+            tomarFotoLauncher.launch(uri)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error al abrir cámara: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Launcher de solicitud de permisos de cámara
+    val pedirPermisoCamaraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (concedido) {
+            ejecutarDisparoCamara()
+        } else {
+            Toast.makeText(context, "Se necesita permiso de cámara para tomar la selfie", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -238,7 +275,7 @@ fun SelfieTuristicaScreen(
                             .padding(bottom = 14.dp)
                     ) {
                         Text(
-                            text = "${punto?.nombre ?: "Hito Turístico de Santiago"}",
+                            text = "${puntoActivo?.nombre ?: "Hito Turístico de Santiago"}",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -279,7 +316,7 @@ fun SelfieTuristicaScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Botones de acción
+            // Botones de acción (Sin simulación)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -287,34 +324,27 @@ fun SelfieTuristicaScreen(
                 if (!fotoTomadaConExito) {
                     Button(
                         onClick = {
-                            val archivo = context.crearArchivoSelfieTemporal()
-                            fotoArchivo = archivo
-                            val uri = context.uriCompartible(archivo)
-                            tomarFotoLauncher.launch(uri)
+                            val permisoConcedido = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                            if (permisoConcedido) {
+                                ejecutarDisparoCamara()
+                            } else {
+                                pedirPermisoCamaraLauncher.launch(Manifest.permission.CAMERA)
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
+                            .height(54.dp)
+                            .animacionLatidoInfinito(true),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = VerdeCompletado)
                     ) {
                         Icon(Icons.Default.CameraAlt, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Disparar Cámara", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
-
-                    // Botón para simular captura (para emuladores sin cámara física)
-                    OutlinedButton(
-                        onClick = {
-                            fotoTomadaConExito = true
-                            fotoUri = Uri.parse("simulated://selfie_santiago.jpg")
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("Simular Captura Selfie (Emulador)", fontWeight = FontWeight.SemiBold)
                     }
                 } else {
                     Button(
@@ -323,7 +353,8 @@ fun SelfieTuristicaScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
+                            .height(54.dp)
+                            .animacionLatidoInfinito(true),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario)
                     ) {

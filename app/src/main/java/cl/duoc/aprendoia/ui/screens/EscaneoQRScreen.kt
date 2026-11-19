@@ -45,14 +45,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.duoc.aprendoia.ui.components.animacionDestelloOpacidad
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.util.QRScannerHelper
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.EscaneoQRViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EscaneoQRScreen(
-    viewModel: AprendoIAViewModel,
+    viewModel: EscaneoQRViewModel = viewModel(),
     onEscaneoExitoso: () -> Unit,
     onVolver: () -> Unit
 ) {
@@ -95,7 +97,7 @@ fun EscaneoQRScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Visor de Cámara con Marco de Escaneo en Modo Claro (Limpio y blanco)
+                // Visor de Cámara con Marco de Escaneo en Modo Claro
                 Box(
                     modifier = Modifier
                         .size(280.dp)
@@ -104,7 +106,7 @@ fun EscaneoQRScreen(
                         .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(24.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Marco delimitador del QR (Fondo blanco, borde azul primario)
+                    // Marco delimitador del QR con animación destello
                     Box(
                         modifier = Modifier
                             .size(200.dp)
@@ -118,11 +120,13 @@ fun EscaneoQRScreen(
                             imageVector = Icons.Default.QrCode,
                             contentDescription = "Código QR",
                             tint = AzulPrimario.copy(alpha = 0.85f),
-                            modifier = Modifier.size(120.dp)
+                            modifier = Modifier
+                                .size(120.dp)
+                                .animacionDestelloOpacidad(true)
                         )
                     }
 
-                    // Indicador inferior dentro del visor (Diseño claro)
+                    // Indicador inferior dentro del visor
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = Color.White,
@@ -155,7 +159,7 @@ fun EscaneoQRScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Mensajes de error si los hay
-                viewModel.mensajeErrorQR?.let { err ->
+                viewModel.mensajeError?.let { err ->
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                         modifier = Modifier.fillMaxWidth(),
@@ -183,7 +187,7 @@ fun EscaneoQRScreen(
                         QRScannerHelper.iniciarEscaneo(
                             context = context,
                             onSuccess = { textoLeido ->
-                                val ok = viewModel.procesarContenidoQR(textoLeido)
+                                val ok = viewModel.procesarQR(textoLeido)
                                 if (ok) {
                                     onEscaneoExitoso()
                                 }

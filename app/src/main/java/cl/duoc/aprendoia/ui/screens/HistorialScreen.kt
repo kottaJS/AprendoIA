@@ -39,26 +39,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.aprendoia.model.HistorialItem
 import cl.duoc.aprendoia.ui.theme.AzulPrimario
 import cl.duoc.aprendoia.ui.theme.VerdeCompletado
-import cl.duoc.aprendoia.viewmodel.AprendoIAViewModel
+import cl.duoc.aprendoia.viewmodel.HistorialViewModel
 
 @Composable
 fun HistorialScreen(
-    viewModel: AprendoIAViewModel
+    viewModel: HistorialViewModel = viewModel()
 ) {
-    var filtroTipo by remember { mutableStateOf("Todos") } // "Todos", "QR", "Videos", "Selfies"
-
-    val itemsHistorial = viewModel.historial
-    val itemsFiltrados = remember(itemsHistorial, filtroTipo) {
-        when (filtroTipo) {
-            "QR" -> itemsHistorial.filter { it.tipo.equals("QR", ignoreCase = true) }
-            "Videos" -> itemsHistorial.filter { it.tipo.equals("Video", ignoreCase = true) }
-            "Selfies" -> itemsHistorial.filter { it.tipo.equals("Selfie", ignoreCase = true) }
-            else -> itemsHistorial
-        }
-    }
+    val filtroTipo = viewModel.filtroTipo
+    val itemsFiltrados = viewModel.itemsFiltrados
 
     // Agrupar por fecha
     val agrupadosPorFecha = remember(itemsFiltrados) {
@@ -92,7 +84,7 @@ fun HistorialScreen(
                 val sel = filtroTipo == f
                 FilterChip(
                     selected = sel,
-                    onClick = { filtroTipo = f },
+                    onClick = { viewModel.onFiltroChange(f) },
                     label = { Text(f, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = AzulPrimario,
