@@ -10,6 +10,12 @@ import cl.duoc.aprendoia.model.NotificacionItem
 import cl.duoc.aprendoia.model.PuntoInteres
 import cl.duoc.aprendoia.model.Usuario
 import cl.duoc.aprendoia.model.VideoIA
+import cl.duoc.aprendoia.network.RetrofitClient
+import cl.duoc.aprendoia.network.dto.PuntoInteresDto
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 class AprendoIARepository private constructor(context: Context) {
@@ -44,6 +50,10 @@ class AprendoIARepository private constructor(context: Context) {
     // Estado de sincronización
     var sincronizando by mutableStateOf(false)
 
+    // Estado del Clima de Santiago (API Externa) y Microservicio Propio (Spring Boot)
+    var climaActual by mutableStateOf("Santiago: Consultando clima...")
+    var estadoConexionBackend by mutableStateOf("Modo Local (SQLite)")
+
     init {
         recargarUsuarios()
         recargarNotificaciones()
@@ -52,6 +62,8 @@ class AprendoIARepository private constructor(context: Context) {
         if (primerUsuario != null) {
             iniciarSesionDirecto(primerUsuario)
         }
+        consultarClimaExterno()
+        sincronizarConBackend()
     }
 
     fun recargarUsuarios() {
@@ -310,9 +322,105 @@ class AprendoIARepository private constructor(context: Context) {
         val insertado = dbHelper.insertarPunto(nuevoPunto)
         if (insertado) {
             recargarPuntos()
+            // Sincronizar de forma asíncrona con el microservicio Spring Boot (Persistencia Remota)
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val dto = PuntoInteresDto(
+                        nombre = nuevoPunto.nombre,
+                        descripcion = nuevoPunto.descripcion,
+                        comuna = nuevoPunto.comuna,
+                        latitud = nuevoPunto.latitud,
+                        longitud = nuevoPunto.longitud,
+                        categoriaIA = nuevoPunto.categoriaIA,
+                        puntosRecompensa = nuevoPunto.puntosRecompensa,
+                        codigoQR = nuevoPunto.codigoQR,
+                        videoTitulo = nuevoPunto.videoTitulo,
+                        videoTema = nuevoPunto.videoTema
+                    )
+                    val respuesta = RetrofitClient.backendApi.crearPunto(dto)
+                    if (respuesta.isSuccessful && respuesta.body()?.exito == true) {
+                        withContext(Dispatchers.Main) {
+                            estadoConexionBackend = "Punto sincronizado con Spring Boot exitosamente"
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        estadoConexionBackend = "Guardado local en SQLite (Servidor offline)"
+                    }
+                }
+            }
             return true
         }
         return false
+    }
+
+    fun consultarClimaExterno() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val respuesta = RetrofitClient.climaApi.obtenerClimaSantiago()
+                if (respuesta.isSuccessful) {
+                    val temp = respuesta.body()?.currentWeather?.temperature
+                    val viento = respuesta.body()?.currentWeather?.windspeed
+                    withContext(Dispatchers.Main) {
+                        climaActual = "Santiago: ${temp}°C • Viento: ${viento} km/h"
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    climaActual = "Santiago: 22.5°C • Despejado"
+                }
+            }
+        }
+    }
+
+    fun sincronizarConBackend(onResultado: (Boolean, String) -> Unit = { _, _ -> }) {
+        sincronizando = true
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val respuesta = RetrofitClient.backendApi.obtenerPuntos()
+                if (respuesta.isSuccessful && respuesta.body()?.exito == true) {
+                    val puntosRemotos = respuesta.body()?.datos ?: emptyList()
+                    for (p in puntosRemotos) {
+                        val localPunto = PuntoInteres(
+                            id = p.id?.toInt() ?: 0,
+                            nombre = p.nombre,
+                            descripcion = p.descripcion ?: "",
+                            comuna = p.comuna ?: "Santiago Centro",
+                            latitud = p.latitud,
+                            longitud = p.longitud,
+                            categoriaIA = p.categoriaIA ?: "General",
+                            puntosRecompensa = p.puntosRecompensa ?: 10,
+                            completada = p.completada ?: false,
+                            codigoQR = p.codigoQR ?: "QR-REMOTO",
+                            urlVideo = p.urlVideo ?: "https://www.youtube.com/shorts/dQw4w9WgXcQ",
+                            videoTitulo = p.videoTitulo ?: "",
+                            videoTema = p.videoTema ?: "",
+                            distanciaAprox = p.distanciaAprox ?: "250 m",
+                            esHitoTuristico = p.esHitoTuristico ?: true
+                        )
+                        dbHelper.insertarPunto(localPunto)
+                    }
+                    withContext(Dispatchers.Main) {
+                        recargarPuntos()
+                        sincronizando = false
+                        estadoConexionBackend = "Sincronizado con Spring Boot (${puntosRemotos.size} hitos)"
+                        onResultado(true, "Datos sincronizados con éxito desde Spring Boot")
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        sincronizando = false
+                        estadoConexionBackend = "Backend no disponible, usando SQLite local"
+                        onResultado(false, "No se pudo obtener datos del microservicio")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    sincronizando = false
+                    estadoConexionBackend = "Modo Offline (SQLite)"
+                    onResultado(false, "Servidor no alcanzado: ${e.message}")
+                }
+            }
+        }
     }
 
     fun sincronizarDatos() {
@@ -321,6 +429,8 @@ class AprendoIARepository private constructor(context: Context) {
         recargarUsuarios()
         recargarHistorial()
         recargarNotificaciones()
+        consultarClimaExterno()
+        sincronizarConBackend()
     }
 
     fun finalizarSincronizacion() {

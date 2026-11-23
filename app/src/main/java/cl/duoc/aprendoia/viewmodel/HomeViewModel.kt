@@ -31,6 +31,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val progresoPorcentaje: Float
         get() = if (totalPuntos > 0) (puntosDescubiertos.toFloat() / totalPuntos) else 0f
 
+    val climaActual: String
+        get() = repository.climaActual
+
+    val estadoConexionBackend: String
+        get() = repository.estadoConexionBackend
+
+    val sincronizando: Boolean
+        get() = repository.sincronizando
+
+    fun sincronizarConBackend(onResultado: (Boolean, String) -> Unit = { _, _ -> }) {
+        repository.sincronizarConBackend(onResultado)
+    }
+
     val desafioPunto: PuntoInteres?
         get() = repository.puntosSantiago.firstOrNull { it.nombre.contains("Moneda", ignoreCase = true) }
             ?: repository.puntosSantiago.firstOrNull { !it.completada }
