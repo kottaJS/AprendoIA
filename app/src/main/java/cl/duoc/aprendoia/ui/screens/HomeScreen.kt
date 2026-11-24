@@ -92,24 +92,6 @@ fun HomeScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "🌤️ ${viewModel.climaActual}",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = AzulPrimario
-                    )
-                    Text(
-                        text = "🌐 Microservicio: Conectado",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = VerdeExito
-                    )
-                }
             }
         }
 
