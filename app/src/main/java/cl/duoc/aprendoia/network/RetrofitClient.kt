@@ -61,8 +61,26 @@ interface ClimaExternalApi {
  */
 object RetrofitClient {
 
-    // En emulador Android, 10.0.2.2 apunta al localhost de tu computador (puerto 8080 de Spring Boot)
-    private const val BACKEND_BASE_URL = "http://10.0.2.2:8080/"
+    // Detección automática: En emulador usa 10.0.2.2; en celular físico por cable USB (adb reverse) usa 127.0.0.1
+    private val isEmulator: Boolean
+        get() {
+            val fp = android.os.Build.FINGERPRINT ?: ""
+            val model = android.os.Build.MODEL ?: ""
+            val brand = android.os.Build.BRAND ?: ""
+            val device = android.os.Build.DEVICE ?: ""
+            val product = android.os.Build.PRODUCT ?: ""
+            return fp.startsWith("generic") ||
+                    fp.startsWith("unknown") ||
+                    model.contains("google_sdk") ||
+                    model.contains("Emulator") ||
+                    model.contains("Android SDK built for x86") ||
+                    (brand.startsWith("generic") && device.startsWith("generic")) ||
+                    "google_sdk" == product
+        }
+
+    private val BACKEND_BASE_URL: String
+        get() = if (isEmulator) "http://10.0.2.2:8080/" else "http://127.0.0.1:8080/"
+
     private const val EXTERNAL_API_BASE_URL = "https://api.open-meteo.com/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
