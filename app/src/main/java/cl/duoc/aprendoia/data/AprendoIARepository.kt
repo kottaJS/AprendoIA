@@ -262,6 +262,17 @@ class AprendoIARepository private constructor(context: Context) {
                     recargarHistorial()
                     recargarUsuarios()
                     mensajeExitoQR = "¡QR encontrado con éxito! (+10 puntos)"
+
+                    // Sincronizar en tiempo real con Spring Boot (PATCH completar punto y PUT puntaje)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            RetrofitClient.backendApi.completarPunto(puntoEncontrado.id.toLong(), false)
+                            RetrofitClient.backendApi.actualizarPuntaje(
+                                uId.toLong(),
+                                mapOf("puntosGanados" to 10, "incrementoQr" to true)
+                            )
+                        } catch (_: Exception) {}
+                    }
                 }
                 true
             } else {
@@ -280,8 +291,19 @@ class AprendoIARepository private constructor(context: Context) {
                     recargarPuntos()
                     recargarHistorial()
                     recargarUsuarios()
+                    mensajeExitoQR = "¡QR encontrado con éxito! (+10 puntos)"
+
+                    // Sincronizar en tiempo real con Spring Boot
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            RetrofitClient.backendApi.completarPunto(puntoPorCodigo.id.toLong(), false)
+                            RetrofitClient.backendApi.actualizarPuntaje(
+                                uId.toLong(),
+                                mapOf("puntosGanados" to 10, "incrementoQr" to true)
+                            )
+                        } catch (_: Exception) {}
+                    }
                 }
-                mensajeExitoQR = "¡QR encontrado con éxito! (+10 puntos)"
                 true
             } else {
                 mensajeErrorQR = "El código QR leído no contiene un formato válido"
@@ -298,6 +320,13 @@ class AprendoIARepository private constructor(context: Context) {
             recargarPuntos()
             recargarHistorial()
             recargarUsuarios()
+
+            // Sincronizar selfie en tiempo real con Spring Boot
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    RetrofitClient.backendApi.completarPunto(puntoId.toLong(), selfie = true)
+                } catch (_: Exception) {}
+            }
         }
         return exito
     }
